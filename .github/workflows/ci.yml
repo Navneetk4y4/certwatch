@@ -1,0 +1,139 @@
+# certwatch CI.
+#
+# The ten checks under "mandatory" are BLOCKING. None is allow_failure, none is
+# nightly. Three of them (importcheck, canary, tenancy-when-it-exists) enforce
+# invariants that cannot be retrofitted; if this pipeline gets slow, make it
+# faster — do not make them optional. The moment one becomes advisory, the
+# property it protects stops being true and nobody notices for months.
+#
+# ┌─ ACTION PINS ──────────────────────────────────────────────────────────────┐
+# │ Every action is pinned to a full commit SHA, never a tag. The SHAs below   │
+# │ were written offline and MUST be verified against the upstream repository  │
+# │ before this workflow is first run:                                        │
+# │                                                                            │
+# │   gh api repos/actions/checkout/git/ref/tags/v4.2.2  --jq .object.sha      │
+# │   gh api repos/actions/setup-go/git/ref/tags/v5.2.0  --jq .object.sha      │
+# │                                                                            │
+# │ An unverified pin fails closed (the action will not resolve), so this is a │
+# │ broken build rather than a silent supply-chain risk — but fix it first.    │
+# └────────────────────────────────────────────────────────────────────────────┘
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  GOFLAGS: -mod=readonly
+  CGO_ENABLED: "0"
+
+jobs:
+  mandatory:
+    name: mandatory gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0   # gitleaks needs full history
+
+      - uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+        with:
+          go-version: "1.23"
+          check-latest: false
+
+      # 1. format
+      - name: gofmt
+        run: |
+          out=$(gofmt -l .)
+          if [ -n "$out" ]; then echo "not gofmt-clean:"; echo "$out"; exit 1; fi
+
+      # 2. vet and lint
+      - name: go vet
+        run: go vet ./...
+
+      - name: staticcheck
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@2024.1.1
+          staticcheck ./...
+
+      - name: gosec (HIGH blocking)
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@v2.21.4
+          gosec -severity high -confidence medium -exclude-dir=test -exclude-dir=internal/tools ./...
+
+      # 3. THE FOUR IMPORT CHECKS — BLOCKING
+      - name: importcheck (CI-006..009)
+        run: go run ./internal/tools/importcheck -root .
+
+      # 4. unit tests under the race detector
+      - name: go test -race
+        run: go test ./... -count=1 -race
+
+      # 5. migrations up/down/up — added when migrations exist (build item 092)
+
+      # 6. THE SECURITY CANARY — BLOCKING, and it must prove it ran
+      - name: security canary (INV-1)
+        run: |
+          set -o pipefail
+          go test ./test/canary/ -count=1 -v -run TestCanary 2>&1 | tee canary.log
+          # A test that silently does not run is how this class of check dies.
+          # Require the result marker from BOTH verbosity levels.
+          if [ "$(grep -c 'CANARY-A-RESULT' canary.log)" -lt 2 ]; then
+            echo "::error::canary did not emit a result marker for both run modes"
+            exit 1
+          fi
+          if ! grep -q 'CANARY-A-RESULT level=DEBUG' canary.log; then
+            echo "::error::canary did not run at debug verbosity"
+            exit 1
+          fi
+          if ! grep -q 'leaks=0' canary.log; then
+            echo "::error::canary did not report zero leaks"
+            exit 1
+          fi
+
+      # 7. tenant isolation — added when the schema exists (build item 097)
+
+      # 8. authz matrix — added with the control plane (build item 102)
+
+      # 9. dependency vulnerabilities
+      - name: govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
+      - name: verify go.sum
+        run: go mod verify
+
+      # 10. secret scanning
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  fuzz-short:
+    name: fuzz (30s per target)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+        with: { go-version: "1.23" }
+      - name: fuzz
+        run: make fuzz
+
+  reproducible:
+    name: reproducible build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+        with: { go-version: "1.23" }
+      # The collector is open source and runs inside customer networks.
+      # "Build it yourself and get identical bytes" is the strongest possible
+      # answer to "how do I know this binary does what the source says?"
+      - name: two builds must be byte-identical
+        run: make repro
