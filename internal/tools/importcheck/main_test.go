@@ -192,3 +192,70 @@ func t() { _ = os.WriteFile("/tmp/x", nil, 0o644) }`},
 		})
 	}
 }
+
+// The read/write distinction. Reading is the INV-1 concern; writing a report to
+// a path the user named is program output.
+func TestReadWriteDistinction(t *testing.T) {
+	dir := t.TempDir()
+	cases := []struct {
+		name, rel, src string
+		wantViolation  bool
+	}{
+		{"cmd may write its report", "cmd/certscan/run.go",
+			"package main\nimport \"os\"\nfunc w() { _, _ = os.Create(\"/tmp/report.json\") }", false},
+		{"pkg may NOT write", "pkg/scan/bad.go",
+			"package scan\nimport \"os\"\nfunc w() { _, _ = os.Create(\"/tmp/x\") }", true},
+		{"cmd may NOT read outside safeio", "cmd/certscan/bad.go",
+			"package main\nimport \"os\"\nfunc r() { _, _ = os.Open(\"/etc/ssl/private/k\") }", true},
+		{"spool may write", "internal/spool/spool.go",
+			"package spool\nimport \"os\"\nfunc w() { _, _ = os.Create(\"/var/lib/x\") }", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(dir, strings.ReplaceAll(tc.rel, "/", "_"))
+			if err := os.WriteFile(path, []byte(tc.src), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			got := checkFile(path, tc.rel)
+			if tc.wantViolation && len(got) == 0 {
+				t.Fatalf("expected a violation, got none")
+			}
+			if !tc.wantViolation && len(got) != 0 {
+				t.Fatalf("false positive: %+v", got)
+			}
+		})
+	}
+}
+
+// Fprintf to a BUFFER is formatting. Flagging it is a false positive, and false
+// positives are how a security check gets disabled by someone in a hurry.
+func TestFprintfToBufferIsNotLogging(t *testing.T) {
+	dir := t.TempDir()
+	cases := []struct {
+		name, src     string
+		wantViolation bool
+	}{
+		{"strings.Builder", "package x509norm\nimport (\"fmt\"\n\"strings\")\nfunc f() string { var sb strings.Builder; fmt.Fprintf(&sb, \"%d\", 1); return sb.String() }", false},
+		{"bytes.Buffer", "package x509norm\nimport (\"bytes\"\n\"fmt\")\nfunc f() { var b bytes.Buffer; fmt.Fprintln(&b, \"x\") }", false},
+		{"os.Stderr", "package x509norm\nimport (\"fmt\"\n\"os\")\nfunc f() { fmt.Fprintln(os.Stderr, \"x\") }", true},
+		{"os.Stdout", "package x509norm\nimport (\"fmt\"\n\"os\")\nfunc f() { fmt.Fprintf(os.Stdout, \"%d\", 1) }", true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(dir, "fp_"+tc.name+".go")
+			if err := os.WriteFile(path, []byte(tc.src), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			got := checkFile(path, "pkg/x509norm/f.go")
+			has := false
+			for _, g := range got {
+				if g.check == "CI-008" {
+					has = true
+				}
+			}
+			if has != tc.wantViolation {
+				t.Fatalf("CI-008 violation = %v, want %v (%+v)", has, tc.wantViolation, got)
+			}
+		})
+	}
+}

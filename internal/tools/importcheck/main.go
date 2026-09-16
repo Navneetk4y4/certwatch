@@ -63,12 +63,28 @@ var nonCollector = []string{
 // otherwise the exemption above would become a hole rather than a boundary.
 var shippedPrefixes = []string{"cmd", "pkg", "internal"}
 
-// bannedFileIO are the entry points through which a file can be opened or read.
-var bannedFileIO = map[string][]string{
-	"os":                    {"Open", "OpenFile", "ReadFile", "ReadDir", "Create", "WriteFile"},
+// bannedFileRead are the entry points through which a file can be OPENED OR
+// READ. These are what the boundary is about: INV-1 is "never read a private
+// key", so reading is the operation that must be confined to pkg/safeio.
+//
+// WRITING is deliberately not on this list. A CLI writing its report to a path
+// the user named is program output, not a read-boundary concern, and banning it
+// would force the report writer into safeio -- a package whose entire purpose
+// is that it only ever reads. Writes are restricted by location instead.
+var bannedFileRead = map[string][]string{
+	"os":                    {"Open", "OpenFile", "ReadFile", "ReadDir"},
 	"io/ioutil":             nil, // whole package
 	"golang.org/x/sys/unix": {"Open", "Openat"},
 }
+
+// bannedFileWrite may appear only under writeAllowedPrefixes.
+var bannedFileWrite = map[string][]string{
+	"os": {"Create", "WriteFile", "Remove", "RemoveAll", "Rename", "MkdirAll", "Chmod"},
+}
+
+// writeAllowedPrefixes may write files: a CLI writes its report, and the spool
+// writes its queue. Nothing in pkg/ writes to disk at all.
+var writeAllowedPrefixes = []string{"cmd", "internal/spool"}
 
 var bannedLogImports = map[string]bool{
 	"log":        true,
@@ -225,26 +241,43 @@ func checkFile(path, rel string) []finding {
 			return true
 		}
 
-		if fns, banned := bannedFileIO[pkgPath]; banned {
-			if fns == nil || contains(fns, sel.Sel.Name) {
-				// Tests legitimately build fixture trees on disk; the boundary
-				// protects the shipped binary, not the test harness.
-				if !inAny(rel, fileIOExceptions) && !isTest {
+		// Tests legitimately build fixture trees on disk; the boundary protects
+		// the shipped binary, not the test harness.
+		if !isTest {
+			if fns, banned := bannedFileRead[pkgPath]; banned {
+				if fns == nil || contains(fns, sel.Sel.Name) {
+					if !inAny(rel, fileIOExceptions) {
+						out = append(out, finding{"CI-007", posOf(fset, call.Pos(), rel),
+							fmt.Sprintf("%s.%s reads a file outside pkg/safeio. "+
+								"safeio is the ONLY code in the collector permitted to open a file (INV-1). "+
+								"If this is genuinely necessary it needs a new entry in fileIOExceptions "+
+								"and a recorded decision.", pkgPath, sel.Sel.Name)})
+					}
+				}
+			}
+			if fns, banned := bannedFileWrite[pkgPath]; banned {
+				if contains(fns, sel.Sel.Name) && !inAny(rel, writeAllowedPrefixes) && !inAny(rel, fileIOExceptions) {
 					out = append(out, finding{"CI-007", posOf(fset, call.Pos(), rel),
-						fmt.Sprintf("%s.%s opens a file outside pkg/safeio. "+
-							"safeio is the ONLY code in the collector permitted to open a file (INV-1). "+
-							"If this is genuinely necessary, it needs a new entry in fileIOExceptions and a recorded decision.",
-							pkgPath, sel.Sel.Name)})
+						fmt.Sprintf("%s.%s writes to disk outside %v. Nothing in pkg/ writes files.",
+							pkgPath, sel.Sel.Name, writeAllowedPrefixes)})
 				}
 			}
 		}
 
-		if pkgPath == "fmt" && bannedPrintFuncs[sel.Sel.Name] {
-			// cmd/ writes its own report to stdout: that is program output, not
+		// fmt.Fprint* to a BUFFER is formatting, not logging. Only writes to a
+		// real output stream are a logging concern — an earlier version flagged
+		// fmt.Fprintf(&strings.Builder{}, ...) inside a DN renderer, which is a
+		// false positive, and false positives are how a check gets disabled.
+		if pkgPath == "fmt" && bannedPrintFuncs[sel.Sel.Name] && !isTest {
+			writesToStream := true
+			if strings.HasPrefix(sel.Sel.Name, "Fprint") && len(call.Args) > 0 {
+				writesToStream = isOutputStream(call.Args[0])
+			}
+			// cmd/ printing its own report to stdout is program output, not
 			// logging, and it is the point of a CLI.
-			if !strings.HasPrefix(rel, "cmd/") && !inAny(rel, logExceptions) && !isTest {
+			if writesToStream && !strings.HasPrefix(rel, "cmd/") && !inAny(rel, logExceptions) {
 				out = append(out, finding{"CI-008", posOf(fset, call.Pos(), rel),
-					"fmt." + sel.Sel.Name + " writes output outside cmd/. Use pkg/safelog (INV-3)."})
+					"fmt." + sel.Sel.Name + " writes to an output stream outside cmd/. Use pkg/safelog (INV-3)."})
 			}
 		}
 		return true
@@ -265,6 +298,21 @@ func inAny(rel string, prefixes []string) bool {
 		}
 	}
 	return false
+}
+
+// isOutputStream reports whether an expression is os.Stdout or os.Stderr.
+// Anything else (a strings.Builder, a bytes.Buffer, an http.ResponseWriter) is
+// a buffer, and writing to a buffer is formatting.
+func isOutputStream(e ast.Expr) bool {
+	sel, ok := e.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	ident, ok := sel.X.(*ast.Ident)
+	if !ok {
+		return false
+	}
+	return ident.Name == "os" && (sel.Sel.Name == "Stdout" || sel.Sel.Name == "Stderr")
 }
 
 func isShipped(rel string) bool {
