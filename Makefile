@@ -18,7 +18,7 @@ LDFLAGS     := -s -w -buildid=
 BUILDFLAGS  := -trimpath -ldflags="$(LDFLAGS)"
 
 .DEFAULT_GOAL := help
-.PHONY: help fmt lint importcheck test test-race canary fuzz fuzz-long cover \
+.PHONY: help fmt vet lint importcheck test test-race canary fuzz fuzz-long cover corpus \
         build build-all repro sbom check clean tools
 
 help: ## Show this help
@@ -114,3 +114,6 @@ check: fmt vet importcheck test-race canary ## Everything CI runs
 
 clean:
 	@rm -rf $(BUILD_DIR) coverage.out
+
+corpus: ## Regenerate the committed certificate corpus (deliberate, not automatic)
+	@$(GO) run ./internal/tools/gencorpus -n 460 -out test/corpus/testdata/corpus.json
