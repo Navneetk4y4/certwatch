@@ -38,6 +38,12 @@ type Counters struct {
 	// CertificatesReturned is the number of certificate DER blocks returned.
 	CertificatesReturned int
 
+	// PrunedSubtrees counts directories not searched because they were deeper
+	// than the traversal limit. Reported separately from Truncated because a
+	// pruned subtree is a LOCAL coverage gap while a truncated walk is a global
+	// one, and conflating them hides which happened.
+	PrunedSubtrees int
+
 	// Truncated records that the walk stopped early because a budget was hit.
 	Truncated    bool
 	TruncatedWhy string
@@ -139,6 +145,7 @@ func (c *Counters) merge(other *Counters) {
 	c.PrivateKeyBlocksSkipped += other.PrivateKeyBlocksSkipped
 	c.UnknownPEMBlocksSkipped += other.UnknownPEMBlocksSkipped
 	c.CertificatesReturned += other.CertificatesReturned
+	c.PrunedSubtrees += other.PrunedSubtrees
 	if other.Truncated {
 		c.Truncated = true
 		c.TruncatedWhy = other.TruncatedWhy

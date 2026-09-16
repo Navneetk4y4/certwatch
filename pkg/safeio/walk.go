@@ -53,6 +53,7 @@ func ReadCertificatesOnly(ctx context.Context, root string, p *Policy) ([]Result
 	w := &walker{policy: p, counters: newCounters(), ctx: ctx}
 	w.descend(cleanRoot, 0)
 
+	w.counters.PrunedSubtrees = w.prunedSubtrees
 	if ctx.Err() != nil {
 		w.counters.TimedOut = true
 		if !w.counters.Truncated {
@@ -64,12 +65,13 @@ func ReadCertificatesOnly(ctx context.Context, root string, p *Policy) ([]Result
 }
 
 type walker struct {
-	policy    *Policy
-	counters  *Counters
-	results   []Result
-	ctx       context.Context
-	stopped   bool
-	bytesUsed int64
+	policy         *Policy
+	counters       *Counters
+	results        []Result
+	ctx            context.Context
+	stopped        bool
+	bytesUsed      int64
+	prunedSubtrees int
 }
 
 func (w *walker) stop(why string) {
@@ -85,9 +87,19 @@ func (w *walker) descend(dir string, depth int) {
 		return
 	}
 	if depth > w.policy.maxDepth {
-		// The directory itself is not a file, so this is recorded as a
-		// truncation rather than a per-file disposition.
-		w.stop("directory traversal depth limit reached")
+		// PRUNE this subtree. Do NOT stop the walk.
+		//
+		// An earlier version called w.stop() here, which set a flag on the shared
+		// walker and terminated the ENTIRE walk. Because entries are name-sorted,
+		// anyone able to create a directory under a scanned root could suppress
+		// discovery of every certificate in it with one alphabetically-early deep
+		// chain: `mkdir -p a/b/c/d/e/f/g/h/i` in a writable upload or cache
+		// directory was the whole exploit. Found by adversarial review.
+		//
+		// Depth is a per-subtree property. Only genuinely global budgets — total
+		// bytes and the timeout — may stop the walk.
+		w.emitSkip(dir, SkippedDepthExceeded, "subtree is deeper than the traversal limit and was not searched")
+		w.prunedSubtrees++
 		return
 	}
 	if isRefusedPath(dir) {
@@ -116,6 +128,14 @@ func (w *walker) descend(dir string, depth int) {
 		if w.stopped || w.ctx.Err() != nil {
 			return
 		}
+		// The file budget is checked HERE, before any per-entry work, so it
+		// bounds skips as well as reads. Checking it only inside visitFile let
+		// a directory of thousands of .p12 files run past MaxFiles, because a
+		// skipped file never reached that check.
+		if w.counters.FilesSeen >= w.policy.maxFiles {
+			w.stop("file count limit reached")
+			return
+		}
 		full := filepath.Join(dir, e.Name())
 		typ := e.Type()
 
@@ -142,10 +162,6 @@ func (w *walker) descend(dir string, depth int) {
 }
 
 func (w *walker) visitFile(path string, e fs.DirEntry) {
-	if w.counters.FilesSeen >= w.policy.maxFiles {
-		w.stop("file count limit reached")
-		return
-	}
 
 	// Extension gate runs BEFORE open(2). Nothing outside the allowlist is ever
 	// opened, so a .p12 is rejected without a single byte of it being read.

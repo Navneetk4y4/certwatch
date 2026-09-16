@@ -50,7 +50,7 @@ func TestParseRejections(t *testing.T) {
 	cases := []struct{ name, doc, want string }{
 		{"no version", "cidrs: [10.0.0.0/8]", "unsupported version"},
 		{"wrong version", "version: 2\ncidrs: [10.0.0.0/8]", "unsupported version"},
-		{"unknown field", "version: 1\ncidrs: [10.0.0.0/8]\nexclude_cidr: [1.1.1.1/32]", "field exclude_cidr"},
+		{"unknown field", "version: 1\ncidrs: [10.0.0.0/8]\nexclude_cidr: [1.1.1.1/32]", "unknown field \"exclude_cidr\""},
 		{"bad cidr", "version: 1\ncidrs: [not-a-cidr]", "is not a CIDR"},
 		{"bad exclude host", "version: 1\ncidrs: [10.0.0.0/8]\nexclude_hosts: [nope]", "not an IP address"},
 		{"port out of range", "version: 1\ncidrs: [10.0.0.0/8]\nports: [70000]", "out of range"},
@@ -247,5 +247,59 @@ func TestAccessorsReturnCopies(t *testing.T) {
 		if s.Directories()[0] == "/etc/ssl/private" {
 			t.Fatal("mutating the returned directory slice widened the scope")
 		}
+	}
+}
+
+// REGRESSION: a parse error must never echo file content.
+//
+// gopkg.in/yaml.v3 quotes the offending text in its errors. The --scope path is
+// operator-supplied and may point anywhere, so pointing it at the wrong file
+// echoed that file's contents to stderr and into any log capturing it.
+// Adversarial review demonstrated this with a shadow-shaped fixture: the error
+// contained the password hash verbatim.
+func TestParseErrorsDoNotEchoFileContent(t *testing.T) {
+	secrets := []struct {
+		name, doc, secret string
+	}{
+		{"shadow-shaped",
+			"root:$6$saltsalt$VERYSECRETHASHVALUE0123456789:19000:0:99999:7::\ndaemon:*:19000:0:99999:7::\n",
+			"VERYSECRETHASHVALUE0123456789"},
+		{"private key PEM",
+			"-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQSECRETKEYBYTES\n-----END PRIVATE KEY-----\n",
+			"SECRETKEYBYTES"},
+		{"env file",
+			"AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMIK7MDENGbPxRfiCYEXAMPLEKEY\n",
+			"wJalrXUtnFEMIK7MDENGbPxRfiCYEXAMPLEKEY"},
+		{"token in a map",
+			"version: 1\napi_token: ghp_SUPERSECRETTOKENVALUE123456\n",
+			"ghp_SUPERSECRETTOKENVALUE123456"},
+	}
+	for _, s := range secrets {
+		t.Run(s.name, func(t *testing.T) {
+			_, err := Parse([]byte(s.doc))
+			if err == nil {
+				t.Fatal("a non-scope document was accepted")
+			}
+			if strings.Contains(err.Error(), s.secret) {
+				t.Fatalf("the error echoed file content: %q", err)
+			}
+			// A prefix of the secret is a leak too.
+			if len(s.secret) > 12 && strings.Contains(err.Error(), s.secret[:12]) {
+				t.Fatalf("the error echoed a prefix of file content: %q", err)
+			}
+		})
+	}
+}
+
+// The sanitised error must still be USEFUL: a line number is what an operator
+// needs to fix their file, and an error with no information at all would be
+// traded for a support ticket.
+func TestSanitisedErrorsStillNameTheLine(t *testing.T) {
+	_, err := Parse([]byte("version: 1\ncidrs: [10.0.0.0/8]\nbogus_field: x\n"))
+	if err == nil {
+		t.Fatal("unknown field accepted")
+	}
+	if !strings.Contains(err.Error(), "line 3") {
+		t.Fatalf("the error does not name the offending line: %q", err)
 	}
 }

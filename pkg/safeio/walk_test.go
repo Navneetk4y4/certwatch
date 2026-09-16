@@ -29,21 +29,70 @@ func walkDir(t *testing.T, dir string, opt PolicyOptions) ([]Result, *Counters) 
 
 func countClass(c *Counters, class Classification) int { return c.Dispositions[class] }
 
-// SAFEIO-002: a tree deeper than the limit stops and says so.
-func TestWalkDepthLimit(t *testing.T) {
+// SAFEIO-002 + REGRESSION: a subtree deeper than the limit is PRUNED, and the
+// rest of the tree is still searched.
+//
+// The earlier implementation aborted the entire walk here. Because entries are
+// name-sorted, anyone able to create a directory under a scanned root could
+// suppress discovery of every certificate in it with one alphabetically-early
+// deep chain — `mkdir -p a/b/c/d/e/f/g/h/i` in a writable upload directory was
+// the whole exploit. Found by adversarial review, confirmed with this scenario.
+func TestWalkDepthLimitPrunesRatherThanAborting(t *testing.T) {
 	dir := t.TempDir()
-	deep := dir
+
+	// An alphabetically-EARLY deep chain containing nothing of value.
+	deep := filepath.Join(dir, "aaa")
 	for i := 0; i < 12; i++ {
 		deep = filepath.Join(deep, fmt.Sprintf("d%02d", i))
 	}
-	writeFile(t, filepath.Join(deep, "leaf.pem"), pemBlock("CERTIFICATE", testCertDER(t, "deep.example")))
+	if err := os.MkdirAll(deep, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// An ordinary certificate, alphabetically later, at depth 1.
+	writeFile(t, filepath.Join(dir, "zzz", "real.pem"),
+		pemBlock("CERTIFICATE", testCertDER(t, "survivor.example")))
 
 	_, c := walkDir(t, dir, PolicyOptions{MaxDepth: 4})
-	if !c.Truncated {
-		t.Fatal("expected the walk to report truncation at the depth limit")
+
+	if c.CertificatesReturned != 1 {
+		t.Fatalf("CertificatesReturned = %d, want 1. A deep directory suppressed discovery of a "+
+			"certificate elsewhere in the tree: %v truncated=%v why=%q",
+			c.CertificatesReturned, c.Dispositions, c.Truncated, c.TruncatedWhy)
 	}
-	if c.CertificatesReturned != 0 {
-		t.Fatalf("leaf below the depth limit was read: %d certificates", c.CertificatesReturned)
+	if c.Truncated {
+		t.Fatalf("the walk reported global truncation for a local depth limit: %q", c.TruncatedWhy)
+	}
+	if c.PrunedSubtrees == 0 {
+		t.Fatal("the pruned subtree was not counted; the coverage gap would be invisible")
+	}
+	if countClass(c, SkippedDepthExceeded) == 0 {
+		t.Fatalf("no SkippedDepthExceeded disposition emitted: %v", c.Dispositions)
+	}
+}
+
+// Pruning must still be VISIBLE. A local coverage gap that nobody can see is
+// the same failure as a silent one.
+func TestPrunedSubtreeIsReported(t *testing.T) {
+	dir := t.TempDir()
+	deep := dir
+	for i := 0; i < 10; i++ {
+		deep = filepath.Join(deep, fmt.Sprintf("d%02d", i))
+	}
+	if err := os.MkdirAll(deep, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	res, c := walkDir(t, dir, PolicyOptions{MaxDepth: 3})
+	found := false
+	for _, r := range res {
+		if r.Class == SkippedDepthExceeded && r.Reason != "" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("no result row explains which subtree was not searched")
+	}
+	if len(c.Summary()) == 0 {
+		t.Fatal("the skip summary does not mention the pruned subtree")
 	}
 }
 
@@ -58,8 +107,28 @@ func TestWalkFileCountLimit(t *testing.T) {
 	if !c.Truncated {
 		t.Fatal("expected truncation at the file limit")
 	}
-	if c.FilesSeen > 11 {
-		t.Fatalf("walk read %d files past a limit of 10", c.FilesSeen)
+	if c.FilesSeen > 10 {
+		t.Fatalf("walk saw %d files past a limit of 10", c.FilesSeen)
+	}
+}
+
+// REGRESSION: the file budget must bound SKIPPED files too.
+//
+// The check used to live inside visitFile, after the extension gate had already
+// rejected the entry — so a directory of thousands of .p12 files ran clean past
+// MaxFiles, because a skipped file never reached the check. Found by
+// adversarial review.
+func TestFileBudgetBoundsSkipsToo(t *testing.T) {
+	dir := t.TempDir()
+	for i := 0; i < 200; i++ {
+		writeFile(t, filepath.Join(dir, fmt.Sprintf("store%03d.p12", i)), []byte("binary"))
+	}
+	_, c := walkDir(t, dir, PolicyOptions{MaxFiles: 5})
+	if c.FilesSeen > 5 {
+		t.Fatalf("FilesSeen = %d with MaxFiles=5; skipped files escaped the budget", c.FilesSeen)
+	}
+	if !c.Truncated {
+		t.Fatal("hitting the file budget was not reported")
 	}
 }
 

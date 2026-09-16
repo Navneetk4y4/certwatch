@@ -54,11 +54,16 @@ func (w *walker) readSniffed(f *os.File, path string, size int64) (Result, int64
 	class, reason := classifyDER(body)
 	res := Result{Path: path, Class: class, Reason: reason}
 	if class == ClassCertificateDER {
-		res.CertificateDER = [][]byte{body}
+		// classifyDER has already established that the outer TLV consumes the
+		// whole input, so body is exactly one certificate and nothing else.
+		// Copy it so the returned slice does not alias a buffer that also held
+		// unclassified bytes.
+		der := make([]byte, len(body))
+		copy(der, body)
+		res.CertificateDER = [][]byte{der}
 		res.Reason = ""
-	} else {
-		zero(body)
 	}
+	zero(body)
 	return res, read, nil
 }
 
@@ -112,10 +117,23 @@ func isPrivateKeyDER(b []byte) bool {
 	return v0[0] == 0x00 || v0[0] == 0x01
 }
 
-// looksLikeCertificateDER performs the three-element structural check.
+// looksLikeCertificateDER performs the three-element structural check AND
+// requires the outer SEQUENCE to consume the entire input.
+//
+// The total-consumption requirement is not pedantry. Without it, a file whose
+// content is `certificate || private-key` passes: the outer TLV describes only
+// the certificate, the trailing key bytes are ignored by the check, and the
+// caller then returns the WHOLE file as "certificate DER" — private key
+// included. That is a direct INV-1 violation, it was found by adversarial
+// review rather than by the canary, and this is the line that closes it.
 func looksLikeCertificateDER(b []byte) bool {
-	tag, _, body, ok := readTLV(b)
+	tag, hdrLen, body, ok := readTLV(b)
 	if !ok || tag != 0x30 {
+		return false
+	}
+	// The element must be the whole input. Anything appended is unaccounted-for
+	// bytes, and unaccounted-for bytes are never returned.
+	if hdrLen+len(body) != len(b) {
 		return false
 	}
 	// tbsCertificate: SEQUENCE

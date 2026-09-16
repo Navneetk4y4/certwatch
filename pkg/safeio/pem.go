@@ -55,7 +55,9 @@ func (w *walker) readPEM(f *os.File, path string) (Result, int64, error) {
 			blockType := strings.TrimSuffix(strings.TrimPrefix(trimmed, pemBeginPrefix), pemSuffix)
 
 			if isPrivateKeyBlockType(blockType) {
-				// Discard to the END marker. No buffer, no allocation, no copy.
+				// Discard to the END marker. discardPEMBlock inspects only the
+				// END-marker prefix of each line and never converts, copies or
+				// retains a body line. INV-2.
 				n := discardPEMBlock(sc, blockType)
 				bytesRead += n
 				w.counters.PrivateKeyBlocksSkipped++
@@ -113,30 +115,81 @@ func (w *walker) readPEM(f *os.File, path string) (Result, int64, error) {
 	return res, bytesRead, nil
 }
 
-// discardPEMBlock reads forward to the matching END line, returning the number
-// of bytes consumed. It never retains the content.
+// discardPEMBlock reads forward to the matching END line without materialising
+// the block body.
 //
-// A truncated block (BEGIN with no END) terminates at EOF rather than hanging,
-// and the bounded scanner buffer means a single enormous line cannot exhaust
-// memory here either.
+// It uses ScanRaw, which exposes the line as a []byte view into the reader's
+// own buffer rather than converting it to a string. Converting would allocate a
+// copy of each key body line on the Go heap, where it would live until the
+// garbage collector happened to reclaim it — unzeroed, and reachable from a
+// heap dump or a core file.
+//
+// An earlier version of this function called sc.Text(), and the comment at its
+// call site claimed "No buffer, no allocation, no copy". That claim was
+// inaccurate, and adversarial review caught it. The invariant is now true by
+// construction: the only bytes touched are the END-marker prefix.
+//
+// A truncated block (BEGIN with no END) terminates at EOF rather than hanging.
 func discardPEMBlock(sc *lineReader, blockType string) int64 {
-	want := pemEndPrefix + blockType + pemSuffix
+	want := []byte(pemEndPrefix + blockType + pemSuffix)
+	endPrefix := []byte(pemEndPrefix)
+	suffix := []byte(pemSuffix)
 	var n int64
-	for sc.Scan() {
-		line := sc.Text()
-		n += int64(len(line)) + 1
-		t := strings.TrimSpace(line)
-		if t == want {
+	for sc.ScanRaw() {
+		raw := sc.Raw()
+		n += int64(len(raw)) + 1
+		// Only END lines are inspected; a body line is never compared, copied,
+		// converted or retained.
+		if len(raw) == 0 || raw[0] != '-' {
+			trimmed := bytesTrimSpace(raw)
+			if len(trimmed) == 0 || trimmed[0] != '-' {
+				continue
+			}
+			raw = trimmed
+		}
+		t := bytesTrimSpace(raw)
+		if bytesEqual(t, want) {
 			return n
 		}
 		// Tolerate a mismatched END label: any END terminates the block. A file
-		// with BEGIN X / END Y is malformed, and continuing to scan for the exact
-		// label would swallow the rest of the file.
-		if strings.HasPrefix(t, pemEndPrefix) && strings.HasSuffix(t, pemSuffix) {
+		// with BEGIN X / END Y is malformed, and scanning on for the exact label
+		// would swallow the rest of the file — including certificates after it.
+		if bytesHasPrefix(t, endPrefix) && bytesHasSuffix(t, suffix) {
 			return n
 		}
 	}
 	return n
+}
+
+func bytesTrimSpace(b []byte) []byte {
+	i, j := 0, len(b)
+	for i < j && (b[i] == ' ' || b[i] == '\t' || b[i] == '\r' || b[i] == '\n') {
+		i++
+	}
+	for j > i && (b[j-1] == ' ' || b[j-1] == '\t' || b[j-1] == '\r' || b[j-1] == '\n') {
+		j--
+	}
+	return b[i:j]
+}
+
+func bytesEqual(a, b []byte) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func bytesHasPrefix(b, p []byte) bool {
+	return len(b) >= len(p) && bytesEqual(b[:len(p)], p)
+}
+
+func bytesHasSuffix(b, s []byte) bool {
+	return len(b) >= len(s) && bytesEqual(b[len(b)-len(s):], s)
 }
 
 // isPrivateKeyBlockType matches every PEM label that carries, or may carry,
@@ -182,6 +235,7 @@ func zero(b []byte) {
 type lineReader struct {
 	r           *bufio.Reader
 	line        string
+	rawBuf      []byte
 	overlong    bool
 	sawOverlong bool
 	err         error
@@ -224,6 +278,44 @@ func (l *lineReader) Scan() bool {
 	l.line = string(buf)
 	return true
 }
+
+// ScanRaw advances like Scan but exposes the line as a []byte view rather than
+// converting it to a string, so a key body line is never copied onto the heap.
+func (l *lineReader) ScanRaw() bool {
+	if l.err != nil {
+		return false
+	}
+	l.overlong = false
+	l.rawBuf = l.rawBuf[:0]
+	for {
+		chunk, isPrefix, err := l.r.ReadLine()
+		if err != nil {
+			if err == io.EOF {
+				if len(l.rawBuf) > 0 {
+					return true
+				}
+				l.err = io.EOF
+				return false
+			}
+			l.err = err
+			return false
+		}
+		if len(l.rawBuf)+len(chunk) <= maxPEMLine {
+			l.rawBuf = append(l.rawBuf, chunk...)
+		} else {
+			l.overlong = true
+			l.sawOverlong = true
+		}
+		if !isPrefix {
+			break
+		}
+	}
+	return true
+}
+
+// Raw returns the current line as bytes. The slice is only valid until the next
+// Scan or ScanRaw call.
+func (l *lineReader) Raw() []byte { return l.rawBuf }
 
 func (l *lineReader) Text() string          { return l.line }
 func (l *lineReader) Overlong() bool        { return l.overlong }

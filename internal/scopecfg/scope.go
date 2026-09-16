@@ -23,7 +23,9 @@ import (
 	"fmt"
 	"net/netip"
 	"path/filepath"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -97,7 +99,7 @@ func Parse(raw []byte) (*Scope, error) {
 	// `exclude_cidrs` must be told, not silently scanned outside their intent.
 	dec.KnownFields(true)
 	if err := dec.Decode(&f); err != nil {
-		return nil, fmt.Errorf("scopecfg: %w", err)
+		return nil, sanitiseParseError(err)
 	}
 	if f.Version != 1 {
 		return nil, fmt.Errorf("scopecfg: unsupported version %d (want 1)", f.Version)
@@ -204,6 +206,81 @@ func validateDirectory(d string) (string, error) {
 		}
 	}
 	return clean, nil
+}
+
+// sanitiseParseError strips file CONTENT out of a parser error.
+//
+// gopkg.in/yaml.v3 quotes the offending text in its errors, so pointing --scope
+// at the wrong file echoes that file's contents back to the operator and into
+// any log that captures stderr. Adversarial review demonstrated this with a
+// shadow-shaped fixture: the error contained the password hash verbatim.
+//
+// A scope file is operator-authored and not secret, but the PATH is
+// operator-supplied and may point anywhere. The line number is all a user needs
+// to fix their file; the content is theirs to look at, not ours to repeat.
+func sanitiseParseError(err error) error {
+	msg := err.Error()
+	var lines []string
+	for _, l := range strings.Split(msg, "\n") {
+		l = strings.TrimSpace(l)
+		if l == "" {
+			continue
+		}
+		if n := extractLineNumber(l); n > 0 {
+			// A misspelled field name is the single most common real error, and
+			// naming it is most of the diagnostic value. Echo it ONLY when it
+			// looks like a field name: lowercase identifier characters, short.
+			//
+			// That admits `exclude_cidr` (helpful) and excludes
+			// `root:$6$saltsalt$HASH:19000:0:99999:7::` (a shadow line, which is
+			// what made this an information-disclosure channel).
+			if fname := extractSafeFieldName(l); fname != "" {
+				lines = append(lines, fmt.Sprintf("line %d: unknown field %q", n, fname))
+				continue
+			}
+			lines = append(lines, fmt.Sprintf("line %d is not valid scope syntax", n))
+			continue
+		}
+		// Any fragment we cannot reduce to a line number is dropped rather than
+		// echoed: failing closed here costs a little diagnostic detail and
+		// removes an information-disclosure channel entirely.
+	}
+	if len(lines) == 0 {
+		return fmt.Errorf("scopecfg: the file is not a valid scope document " +
+			"(content withheld from this message; check the file yourself)")
+	}
+	if len(lines) > 5 {
+		lines = append(lines[:5], fmt.Sprintf("and %d more problems", len(lines)-5))
+	}
+	return fmt.Errorf("scopecfg: %s", strings.Join(lines, "; "))
+}
+
+var lineNumberPattern = regexp.MustCompile(`line (\d+)`)
+
+// safeFieldName matches an identifier-shaped YAML key. Deliberately strict:
+// lowercase letters, digits and underscores only, at most 40 characters, and no
+// punctuation of any kind. Anything that is not obviously a field name is
+// suppressed rather than echoed.
+var safeFieldName = regexp.MustCompile(`field ([a-z][a-z0-9_]{0,39}) not found`)
+
+func extractSafeFieldName(s string) string {
+	m := safeFieldName.FindStringSubmatch(s)
+	if len(m) != 2 {
+		return ""
+	}
+	return m[1]
+}
+
+func extractLineNumber(s string) int {
+	m := lineNumberPattern.FindStringSubmatch(s)
+	if len(m) != 2 {
+		return 0
+	}
+	n, err := strconv.Atoi(m[1])
+	if err != nil {
+		return 0
+	}
+	return n
 }
 
 func parsePrefix(s string) (netip.Prefix, error) {

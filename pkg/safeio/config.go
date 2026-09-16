@@ -11,6 +11,13 @@ import (
 	"syscall"
 )
 
+// configExtensions is the allowlist for ReadConfigFile.
+var configExtensions = map[string]bool{
+	".yaml": true, ".yml": true, ".json": true, ".txt": true, ".conf": true, ".list": true,
+}
+
+var configExtensionList = []string{".yaml", ".yml", ".json", ".txt", ".conf", ".list"}
+
 // MaxConfigBytes bounds a configuration file. A scope file is a few kilobytes;
 // the cap is small deliberately so this cannot become a general file reader.
 const MaxConfigBytes = 256 << 10
@@ -37,8 +44,14 @@ func ReadConfigFile(path string) ([]byte, error) {
 	if isRefusedPath(path) {
 		return nil, fmt.Errorf("safeio: config path %q is under a refused prefix", path)
 	}
-	if ext := lowerExt(path); deniedExtensions[ext] {
-		return nil, fmt.Errorf("safeio: refusing to open %q: extension %s is a key or keystore format", path, ext)
+	// An ALLOWLIST, not just a denylist. With a denylist alone this function
+	// would happily read /etc/shadow (no extension, therefore not denied) —
+	// which makes it a general file reader wearing a config-reader label, and
+	// the whole point of routing config through safeio is that it is not one.
+	ext := lowerExt(path)
+	if !configExtensions[ext] {
+		return nil, fmt.Errorf("safeio: refusing to open %q as configuration: "+
+			"only %v files are read here", path, configExtensionList)
 	}
 
 	fi, err := os.Lstat(path)

@@ -24,7 +24,13 @@ import (
 // fingerprint, and the inventory does not quietly become wrong.
 //
 // This path handles hostile input and is in the fuzz corpus.
-func lenientParse(der []byte, out *model.Certificate, cause error) *model.Certificate {
+func lenientParse(der []byte, out *model.Certificate, cause error) (result *model.Certificate) {
+	// NAMED result, deliberately. With an unnamed result a deferred recover
+	// makes the function return the ZERO value — nil — discarding the row it
+	// had been building, and ParseDER would then hand its caller a nil
+	// certificate for exactly the hostile input the recover exists to survive.
+	// Found by adversarial review.
+	result = out
 	out.ParseNotes = append(out.ParseNotes, "crypto/x509 rejected this certificate: "+cause.Error())
 
 	recovered := 0
@@ -35,6 +41,7 @@ func lenientParse(der []byte, out *model.Certificate, cause error) *model.Certif
 		if r := recover(); r != nil {
 			out.ParseNotes = append(out.ParseNotes, fmt.Sprintf("lenient recovery aborted: %v", r))
 			out.ParseStatus = model.ParseUnparseable
+			result = out
 		}
 	}()
 

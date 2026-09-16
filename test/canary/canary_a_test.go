@@ -3,9 +3,12 @@ package canary_test
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/certwatch/certwatch/pkg/safeio"
@@ -22,6 +25,7 @@ var expectedSkips = map[safeio.Classification]int{
 	safeio.SkippedForbiddenExtension: 2, // server.key, id_rsa
 	safeio.SkippedPrivateKeyBlock:    2, // raw.der (file), bundle.pem (block)
 	safeio.SkippedSymlinkEscape:      1, // link.pem
+	safeio.SkippedAmbiguousDER:       1, // appended.der -- cert || key, refused
 }
 
 // TestCanaryA is the security canary, part one: the filesystem surface.
@@ -137,8 +141,8 @@ func runCanaryA(t *testing.T, level safelog.Level) {
 			t.Errorf("skip class %v = %d, want %d", class, got[class], want)
 		}
 	}
-	if total := counters.TotalSkips(); total != 5 {
-		t.Errorf("TotalSkips = %d, want exactly 5 (one per planted form): %v", total, got)
+	if total := counters.TotalSkips(); total != 6 {
+		t.Errorf("TotalSkips = %d, want exactly 6 (one per planted form): %v", total, got)
 	}
 	for class, n := range got {
 		if _, expected := expectedSkips[class]; !expected && n > 0 {
@@ -230,4 +234,74 @@ func readDirBytes(t *testing.T, dir string) []byte {
 		buf.Write(b)
 	}
 	return buf.Bytes()
+}
+
+// The detector must catch hex and URL-safe base64 too.
+//
+// Added after adversarial review observed that the original three detections
+// (raw, standard base64, PEM body line) would miss a key leaked in either
+// encoding — and hex is exactly what a fingerprint-formatting helper or a %x
+// verb produces.
+func TestCanaryDetectsAlternativeEncodings(t *testing.T) {
+	pk, err := canary.GenerateKey(seedPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cases := []struct {
+		name string
+		data []byte
+	}{
+		{"hex of the modulus", []byte(hex.EncodeToString(pk.ModulusRaw))},
+		{"hex of a window", []byte(hex.EncodeToString(pk.PKCS8DER[20:120]))},
+		{"hex inside a log line", []byte(`{"msg":"key","bytes":"` + hex.EncodeToString(pk.ModulusRaw[:80]) + `"}`)},
+		{"URL-safe base64", []byte(base64.RawURLEncoding.EncodeToString(pk.PKCS8DER))},
+		{"URL-safe base64 window", []byte(base64.RawURLEncoding.EncodeToString(pk.ModulusRaw[10:150]))},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if leaks := canary.Detect(pk, []canary.Artefact{{Name: "planted", Data: tc.data}}); len(leaks) == 0 {
+				t.Fatalf("detector missed a %s leak", tc.name)
+			}
+		})
+	}
+}
+
+// REGRESSION for the leak adversarial review found: a certificate DER with a
+// private key appended must be refused, and must not appear in any artefact.
+//
+// The lesson recorded in Plant(): a canary tests the leak shapes it plants, and
+// nothing else. Five forms were planted; this sixth shape was invisible to it.
+func TestCanaryCatchesAppendedKeyForm(t *testing.T) {
+	root := t.TempDir()
+	tree, err := canary.Plant(root, seedPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, f := range tree.Forms {
+		if strings.Contains(f.Description, "appended") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("the cert||key form is no longer planted; the leak class it covers would be invisible again")
+	}
+
+	policy, err := safeio.NewPolicy([]string{tree.ScanDir}, safeio.PolicyOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	results, _, err := safeio.ReadCertificatesOnly(context.Background(), tree.ScanDir, policy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var returned bytes.Buffer
+	for _, r := range results {
+		for _, der := range r.CertificateDER {
+			returned.Write(der)
+		}
+	}
+	if leaks := canary.Detect(tree.Key, []canary.Artefact{{Name: "returned", Data: returned.Bytes()}}); len(leaks) > 0 {
+		t.Fatalf("the appended-key form leaked: %v", leaks)
+	}
 }

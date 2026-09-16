@@ -15,6 +15,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"io"
@@ -123,6 +124,14 @@ type Tree struct {
 //	c) certs/nested/deep/id_rsa      no extension         -> SkippedForbiddenExtension
 //	d) certs/link.pem -> ../secret/  symlink escape       -> SkippedSymlinkEscape
 //	e) certs/raw.der                 PKCS#8 DER           -> SkippedPrivateKeyBlock
+//	f) certs/appended.der            cert || PKCS#8 key   -> SkippedAmbiguousDER
+//
+// Form (f) exists because adversarial review found a real leak that forms
+// (a)-(e) did not plant: a DER file whose outer structure describes a valid
+// certificate but which has key bytes appended. The classifier accepted it and
+// returned the whole file. Planting only a PURE key meant the canary could not
+// see that class at all — which is the lesson: a canary tests the leak shapes
+// it plants, and nothing else.
 func Plant(root, seedPath string) (*Tree, error) {
 	key, err := GenerateKey(seedPath)
 	if err != nil {
@@ -198,6 +207,15 @@ func Plant(root, seedPath string) (*Tree, error) {
 	}
 	t.Forms = append(t.Forms, PlantedForm{filepath.Join(scan, "raw.der"), "raw PKCS#8 DER private key named .der"})
 
+	// (f) a valid certificate with a private key appended -- the leak class the
+	// original five forms could not see.
+	appended := append(append([]byte{}, t.Certificates[1]...), key.PKCS8DER...)
+	if err := write(filepath.Join(scan, "appended.der"), appended); err != nil {
+		return nil, err
+	}
+	t.Forms = append(t.Forms, PlantedForm{filepath.Join(scan, "appended.der"),
+		"valid certificate DER with a PKCS#8 private key appended"})
+
 	return t, nil
 }
 
@@ -221,12 +239,19 @@ func (l Leak) String() string {
 
 // Detect searches every artefact for any trace of the planted key.
 //
-// Three detections, deliberately overlapping:
+// Five detections, deliberately overlapping:
 //
 //  1. any RawWindow-byte contiguous window of the modulus or of either DER encoding
-//  2. the base64 of any Base64Window-byte window of the same — catches a []byte
-//     accidentally marshalled into JSON, which is the single most likely leak
-//  3. any PEM body line of the key, verbatim
+//  2. the STANDARD base64 of any Base64Window-byte window of the same — catches a
+//     []byte accidentally marshalled into JSON, the single most likely leak
+//  3. the URL-SAFE base64 of the same — a different alphabet is still a leak, and
+//     JWT/JWS-adjacent code paths use it by default
+//  4. the HEX encoding of the same — fingerprint-formatting helpers and %x verbs
+//     produce hex, and an earlier version of this detector would have missed it
+//  5. any PEM body line of the key, verbatim
+//
+// Detections 3 and 4 were added after adversarial review observed that the
+// original three would miss a leak in either encoding.
 func Detect(pk *PlantedKey, artefacts []Artefact) []Leak {
 	var leaks []Leak
 	raws := [][2]any{
@@ -245,9 +270,17 @@ func Detect(pk *PlantedKey, artefacts []Artefact) []Leak {
 				leaks = append(leaks, Leak{a.Name, "raw-" + name, off,
 					fmt.Sprintf("%d-byte contiguous window of the planted key's %s", RawWindow, name)})
 			}
-			if off := findBase64Window(a.Data, data, Base64Window); off >= 0 {
+			if off := findEncodedWindow(a.Data, data, Base64Window, base64.StdEncoding.EncodeToString); off >= 0 {
 				leaks = append(leaks, Leak{a.Name, "base64-" + name, off,
-					fmt.Sprintf("base64 of a %d-byte window of the planted key's %s", Base64Window, name)})
+					fmt.Sprintf("standard base64 of a %d-byte window of the planted key's %s", Base64Window, name)})
+			}
+			if off := findEncodedWindow(a.Data, data, Base64Window, base64.RawURLEncoding.EncodeToString); off >= 0 {
+				leaks = append(leaks, Leak{a.Name, "base64url-" + name, off,
+					fmt.Sprintf("URL-safe base64 of a %d-byte window of the planted key's %s", Base64Window, name)})
+			}
+			if off := findEncodedWindow(a.Data, data, RawWindow, hex.EncodeToString); off >= 0 {
+				leaks = append(leaks, Leak{a.Name, "hex-" + name, off,
+					fmt.Sprintf("hex encoding of a %d-byte window of the planted key's %s", RawWindow, name)})
 			}
 		}
 		for _, line := range pk.PEMBodies {
@@ -276,19 +309,27 @@ func findWindow(hay, needle []byte, window int) int {
 	return -1
 }
 
-// findBase64Window checks the three base64 phase alignments, because a byte
-// slice embedded in a larger encoded payload will not be aligned to a 3-byte
-// boundary and a naive single-alignment check would miss it.
-func findBase64Window(hay, needle []byte, window int) int {
+// findEncodedWindow searches for an encoded window of the needle under the
+// given encoder.
+//
+// It checks three phase alignments because a byte slice embedded in a larger
+// encoded payload will not start on a 3-byte boundary, and it trims the
+// alignment-sensitive edges of each encoded window so the stable interior is
+// what gets matched. Hex is alignment-insensitive but goes through the same
+// path for uniformity; the trim costs a few characters of sensitivity and
+// removes a class of false negative.
+func findEncodedWindow(hay, needle []byte, window int, encode func([]byte) string) int {
 	if len(needle) < window {
 		return -1
 	}
 	for phase := 0; phase < 3; phase++ {
 		for i := phase; i+window <= len(needle); i += 3 {
-			enc := base64.StdEncoding.EncodeToString(needle[i : i+window])
-			// Trim the padding-sensitive edges: the interior is alignment-stable.
+			enc := encode(needle[i : i+window])
 			if len(enc) > 8 {
 				enc = enc[4 : len(enc)-4]
+			}
+			if len(enc) < 8 {
+				continue
 			}
 			if off := bytes.Index(hay, []byte(enc)); off >= 0 {
 				return off
