@@ -1,6 +1,8 @@
 package safeio
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -71,4 +73,15 @@ func ReadConfigFile(path string) ([]byte, error) {
 		return nil, fmt.Errorf("safeio: config file %q exceeded the %d byte limit while reading", path, MaxConfigBytes)
 	}
 	return b, nil
+}
+
+// Digest is the SHA-256 of a config file's bytes, lowercase hex.
+//
+// The collector reports it in every heartbeat so the control plane can show the
+// customer which scope their collector is actually enforcing. A change is an
+// audit event: a scope file edited on the host without anyone knowing is exactly
+// the drift this makes visible.
+func Digest(b []byte) string {
+	sum := sha256.Sum256(b)
+	return "sha256:" + hex.EncodeToString(sum[:])
 }
