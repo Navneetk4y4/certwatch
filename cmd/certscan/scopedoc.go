@@ -49,7 +49,7 @@ func parseScopeDocument(raw []byte) (*scopeDocument, error) {
 				}
 				sc.cidrs = append(sc.cidrs, p.Masked())
 			case "certificate_directories":
-				d, err := absDir(val)
+				d, err := scopeDir(val)
 				if err != nil {
 					return nil, fmt.Errorf("scope line %d: %w", lineNo, err)
 				}
@@ -113,7 +113,7 @@ func parseScopeDocument(raw []byte) (*scopeDocument, error) {
 						}
 						sc.cidrs = append(sc.cidrs, p.Masked())
 					case "certificate_directories":
-						d, err := absDir(part)
+						d, err := scopeDir(part)
 						if err != nil {
 							return nil, fmt.Errorf("scope line %d: %w", lineNo, err)
 						}
@@ -133,7 +133,26 @@ func parseScopeDocument(raw []byte) (*scopeDocument, error) {
 	return sc, nil
 }
 
-// absDir validates a directory path from configuration or a flag.
+// scopeDir validates a directory path from a SCOPE FILE.
+//
+// A relative path is refused here, unlike on the command line. In a scope file
+// "certs" is ambiguous — relative to the file, or to whatever directory the
+// collector happened to start in? Those differ, and a security-relevant config
+// that means different things depending on how it was invoked is a config that
+// will eventually mean the wrong thing.
+//
+// On the command line the shell's working directory is unambiguous, so absDir
+// resolves relative paths there.
+func scopeDir(d string) (string, error) {
+	if !filepath.IsAbs(strings.TrimSpace(d)) {
+		return "", fmt.Errorf("certificate directory %q is not absolute; "+
+			"a scope file must not depend on the directory the collector started in", d)
+	}
+	return absDir(d)
+}
+
+// absDir validates a directory path from a command-line flag, resolving it
+// against the current working directory.
 func absDir(d string) (string, error) {
 	if strings.ContainsRune(d, 0) {
 		return "", fmt.Errorf("path contains a NUL byte")

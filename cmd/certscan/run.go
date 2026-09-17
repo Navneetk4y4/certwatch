@@ -172,6 +172,23 @@ func buildPlan(opt options) (*plan, error) {
 	}
 	sort.Ints(p.ports)
 	p.hostnames = dedupe(p.hostnames)
+
+	// Apply defaults HERE, not only inside Sweep, so the values the report and
+	// the log record are the values actually used. A report that says
+	// "rate_limit_per_second: 0" is a report nobody can reproduce from.
+	if p.policy.RatePerSecond <= 0 {
+		p.policy.RatePerSecond = 50
+	}
+	if p.policy.Concurrency <= 0 {
+		p.policy.Concurrency = 20
+	}
+	if p.policy.RatePerSecond > 500 {
+		return nil, fmt.Errorf("--rate %d exceeds the maximum of 500 handshakes per second", p.policy.RatePerSecond)
+	}
+	if p.policy.Concurrency > 500 {
+		return nil, fmt.Errorf("--concurrency %d exceeds the maximum of 500", p.policy.Concurrency)
+	}
+	sort.Ints(p.ports)
 	return p, nil
 }
 
