@@ -53,6 +53,23 @@ The build is reproducible: two independent builds of the same commit produce
 byte-identical binaries, so you can verify a published binary matches this
 source. `make repro` checks that.
 
+### Dependencies
+
+`certscan` depends on **two** external modules, both maintained by the Go team
+under the same review process as the standard library:
+
+| Module | Why |
+|---|---|
+| `golang.org/x/net/idna` | IDN → punycode normalisation of certificate SANs. Go has no IDNA implementation in the standard library, and hand-rolling IDNA2008 + UTS-46 is a correctness minefield where getting it wrong means matching the wrong hostname |
+| `golang.org/x/text` | Pulled in by the above |
+
+That is the complete list, and `make deps-check` fails the build if it grows.
+
+**The AWS SDK is deliberately not among them.** It brings roughly thirty
+modules, so AWS enumeration lives in a separate binary, `certscan-aws`. You are
+not asked to run thirty modules' worth of code inside your network for a feature
+you may not use. Both binaries ship together.
+
 ## Use
 
 **Always dry-run a range you have not scanned before.** It prints the target
@@ -164,6 +181,7 @@ make canary     # the private-key leak test, on its own
 | "no command execution" | The same check bans `os/exec` anywhere in the module |
 | "reproducible build" | `make repro` — two builds, compared byte for byte |
 | The scan is bounded | `pkg/scan/ratelimit.go` — 60 lines, no dependency |
+| The dependency list is short | `make deps-check` — fails if `certscan` gains a module outside the approved set |
 
 ## Known limitations
 

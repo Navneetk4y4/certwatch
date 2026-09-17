@@ -70,11 +70,34 @@ cover: ## Coverage report
 	@$(GO) tool cover -func=coverage.out | grep -E 'pkg/(safeio|x509norm|scan)' | \
 	  awk '{printf "  %-55s %s\n", $$1, $$3}'
 
-build: ## Build certscan for this platform
+build: ## Build both binaries for this platform
 	@mkdir -p $(BUILD_DIR)
 	@SOURCE_DATE_EPOCH=$${SOURCE_DATE_EPOCH:-1757894400} \
 	  $(GO) build $(BUILDFLAGS) -o $(BUILD_DIR)/certscan ./cmd/certscan
-	@echo "built $(BUILD_DIR)/certscan"
+	@SOURCE_DATE_EPOCH=$${SOURCE_DATE_EPOCH:-1757894400} \
+	  $(GO) build $(BUILDFLAGS) -o $(BUILD_DIR)/certscan-aws ./cmd/certscan-aws
+	@echo "built $(BUILD_DIR)/certscan and $(BUILD_DIR)/certscan-aws"
+
+deps-check: ## Assert cmd/certscan depends only on the approved module set
+	@# certscan's dependency set is ALLOWLISTED, not merely counted. The AWS SDK
+	@# lives in certscan-aws precisely so this list stays short enough that a
+	@# reviewer can read it. Adding a module here needs an entry in
+	@# docs/dependencies.md in the same change.
+	@# `vendor/golang.org/x/...` entries are Go's OWN vendored stdlib internals
+	@# (crypto/tls vendors x/crypto), not third-party dependencies, so they are
+	@# excluded — they ship with the toolchain either way.
+	@unexpected=$$($(GO) list -deps ./cmd/certscan \
+	   | grep -v '^$(MODULE)' | grep '\.' \
+	   | grep -v '^vendor/' \
+	   | grep -vE '^golang\.org/x/(net/idna|text/)' || true); \
+	 if [ -n "$$unexpected" ]; then \
+	   echo "cmd/certscan gained an unapproved dependency:"; echo "$$unexpected"; \
+	   echo; echo "Approved: golang.org/x/net/idna and golang.org/x/text (IDN normalisation)."; \
+	   echo "Anything else belongs in a separate binary. See docs/dependencies.md."; \
+	   exit 1; \
+	 fi; \
+	 n=$$($(GO) list -deps ./cmd/certscan | grep -v '^$(MODULE)' | grep '\.' | grep -vc '^vendor/' || true); \
+	 echo "deps-check: certscan depends on $$n approved external packages, from 2 modules (x/net/idna, x/text)"
 
 build-all: ## Build all three release targets
 	@mkdir -p $(BUILD_DIR)
@@ -108,7 +131,7 @@ deps: ## List the dependency tree and the recorded justification
 	@$(GO) list -m all
 	@echo; echo "Justification for every non-stdlib dependency: docs/dependencies.md"
 
-check: fmt vet importcheck test-race canary ## Everything CI runs
+check: fmt vet importcheck deps-check test-race canary ## Everything CI runs
 	@echo
 	@echo "check: ALL GATES PASSED"
 
@@ -117,3 +140,16 @@ clean:
 
 corpus: ## Regenerate the committed certificate corpus (deliberate, not automatic)
 	@$(GO) run ./internal/tools/gencorpus -n 460 -out test/corpus/testdata/corpus.json
+
+verify-pins: ## Check that every pinned GitHub Action SHA resolves upstream
+	@bash scripts/verify-action-pins.sh
+
+aws-lab-up: ## Start LocalStack for the AWS integration tests
+	@docker compose -f test/lab/docker-compose.aws.yml up -d
+	@echo "waiting for LocalStack..."; until curl -sf http://localhost:4566/_localstack/health >/dev/null; do sleep 2; done; echo ready
+
+aws-lab-test: ## Run the AWS integration tests against LocalStack
+	@$(GO) test ./pkg/discover/aws/ -tags=localstack -count=1 -v
+
+aws-lab-down: ## Stop LocalStack
+	@docker compose -f test/lab/docker-compose.aws.yml down -v

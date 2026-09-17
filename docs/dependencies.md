@@ -8,10 +8,22 @@ The collector is a static binary that runs inside customer networks. Every
 dependency is a supply-chain question a security reviewer is entitled to ask,
 and "we needed a token bucket" is not a good answer to it.
 
-## Currently: zero runtime dependencies
+## Current state
 
-`go.mod` has no `require` block. Items 001–049 (through the published scanner)
-are implemented against the standard library alone.
+| Binary | External modules | Why |
+|---|---|---|
+| **`certscan`** | **2** — `golang.org/x/net/idna`, `golang.org/x/text` | IDN normalisation of SANs. Both are maintained by the Go team under the same review process as the standard library |
+| `certscan-aws` | ~30 (the AWS SDK) | Separate binary precisely so `certscan` does not carry them |
+
+`make deps-check` fails the build if `certscan` gains a module outside that
+allowlist. The split exists because "read the source, it has two dependencies"
+is worth a great deal in a first security review, and thirty modules for an
+optional feature is exactly the objection `project_1_security_model.md` §6
+anticipated.
+
+An earlier draft of the README claimed `certscan` had ZERO dependencies. That
+was false — `deps-check` caught it — and the claim is corrected rather than the
+check relaxed.
 
 Things deliberately NOT taken as dependencies:
 

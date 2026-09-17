@@ -1,0 +1,23 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CertwatchReadOnlyDiscovery",
+      "Effect": "Allow",
+      "Action": [
+        "acm:ListCertificates",
+        "acm:DescribeCertificate",
+        "acm:ListTagsForCertificate",
+        "elasticloadbalancing:DescribeLoadBalancers",
+        "elasticloadbalancing:DescribeListeners",
+        "elasticloadbalancing:DescribeListenerCertificates",
+        "cloudfront:ListDistributions",
+        "cloudfront:GetDistributionConfig",
+        "iam:ListServerCertificates",
+        "iam:GetServerCertificate",
+        "apigateway:GET"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

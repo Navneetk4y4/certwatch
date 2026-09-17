@@ -1,0 +1,22 @@
+# LocalStack, for AWS enumeration tests (build item 057).
+#
+# Only the services certwatch actually calls. LocalStack's community edition
+# covers ACM, ELBv2, IAM, CloudFront and API Gateway well enough to exercise
+# pagination, partial AccessDenied and idempotency, which is what the tests
+# assert. It does not need to be a faithful AWS.
+#
+#   docker compose -f test/lab/docker-compose.aws.yml up -d
+#   go test ./pkg/discover/aws/ -run TestLocalStack -tags=localstack -count=1
+services:
+  localstack:
+    image: localstack/localstack:3.8
+    ports: ["4566:4566"]
+    environment:
+      SERVICES: acm,elbv2,iam,cloudfront,apigateway,sts,ec2
+      DEBUG: "0"
+      EAGER_SERVICE_LOADING: "1"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:4566/_localstack/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
