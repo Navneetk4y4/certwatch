@@ -300,13 +300,31 @@ func NormaliseSANs(c *x509.Certificate) (sans []string, truncated int, notes []s
 }
 
 // normaliseDNSName applies rule 2, preserving wildcards per rule 4.
+//
+// Idempotence (property P-5) is the binding constraint here: two observations
+// of the same certificate must normalise identically, or deduplication and
+// expected-state comparison both break. That is why ALL trailing dots are
+// stripped rather than one — TrimSuffix removes a single dot, so ".." became
+// "." became "", and the value kept changing every time normalisation ran.
 func normaliseDNSName(d string) (string, string) {
 	s := strings.TrimSpace(d)
 	s = strings.ToLower(s)
-	s = strings.TrimSuffix(s, ".") // exactly one trailing dot
+	s = strings.TrimRight(s, ".") // ALL trailing dots; see idempotence note above
 
 	if s == "" {
 		return "", "empty dNSName SAN"
+	}
+	// Control characters — a NUL especially — must never reach the report. A
+	// NUL takes the ASCII fast path below, so checking only there would let it
+	// through verbatim into JSON, and into whatever consumes that JSON with
+	// C-string semantics.
+	if i := strings.IndexFunc(s, func(r rune) bool { return r < 0x20 || r == 0x7f }); i >= 0 {
+		return strings.Map(func(r rune) rune {
+			if r < 0x20 || r == 0x7f {
+				return -1
+			}
+			return r
+		}, s), fmt.Sprintf("dNSName %q contained control characters, which were removed", d)
 	}
 	// ASCII-only names need no IDN work, which is the overwhelming majority and
 	// avoids putting hostile bytes through a larger code path unnecessarily.

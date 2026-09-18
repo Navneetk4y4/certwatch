@@ -9,6 +9,28 @@ import (
 	"time"
 )
 
+// verifyDialAddress is the last check before the kernel connects.
+//
+// It is a named function rather than an inline closure so it can be tested
+// independently of the pre-dial check in dialByAddress. Those two checks look
+// redundant and are not: the first is the policy decision, this one is the
+// TOCTOU closure, and a test that only exercises the first proves nothing about
+// the second.
+//
+// address is in host:port form as the dialler resolved it.
+func verifyDialAddress(address string) error {
+	ap, err := netip.ParseAddrPort(address)
+	if err != nil {
+		// Fail closed. A dial address we cannot parse is a dial address we
+		// cannot check, and an unverifiable connection is refused.
+		return fmt.Errorf("scan: refusing to connect: could not parse dial address %q", address)
+	}
+	if blocked, why := AddrBlocked(ap.Addr()); blocked {
+		return fmt.Errorf("scan: refused at connect: %s", why)
+	}
+	return nil
+}
+
 // Resolver is the DNS interface, injectable so the rebinding defence can be
 // tested against a resolver that deliberately changes its answers.
 type Resolver interface {
@@ -81,16 +103,11 @@ func dialByAddress(ctx context.Context, addr netip.Addr, port int, timeout time.
 	}
 	d := &net.Dialer{
 		Timeout: timeout,
+		// verifyDialAddress runs at the syscall, on whatever the kernel is
+		// actually about to connect to — which is the check that survives a
+		// future refactor reintroducing a hostname path.
 		Control: func(network, address string, c syscall.RawConn) error {
-			// address is what the kernel will connect to. Verify THAT.
-			ap, err := netip.ParseAddrPort(address)
-			if err != nil {
-				return fmt.Errorf("scan: could not parse dial address %q", address)
-			}
-			if blocked, why := AddrBlocked(ap.Addr()); blocked {
-				return fmt.Errorf("scan: refused at connect: %s", why)
-			}
-			return nil
+			return verifyDialAddress(address)
 		},
 	}
 	ap := netip.AddrPortFrom(addr, uint16(port))
