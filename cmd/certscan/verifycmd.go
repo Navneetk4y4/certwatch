@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/netip"
 	"os"
 	"sort"
 	"time"
@@ -51,10 +52,15 @@ type VerifySummary struct {
 
 	// PartialRollouts is the headline number. It is the finding no
 	// hostname-level monitor produces.
-	PartialRollouts       int `json:"partial_rollouts"`
-	FingerprintDivergence int `json:"fingerprint_divergence"`
-	Unconfirmed           int `json:"unconfirmed_expectations"`
-	Alertable             int `json:"alertable"`
+	PartialRollouts int `json:"partial_rollouts"`
+
+	// PartialRolloutsSuppressed counts real partial rollouts held inside a
+	// grace window. Reported separately so the headline never claims a finding
+	// that is currently silenced.
+	PartialRolloutsSuppressed int `json:"partial_rollouts_suppressed,omitempty"`
+	FingerprintDivergence     int `json:"fingerprint_divergence"`
+	Unconfirmed               int `json:"unconfirmed_expectations"`
+	Alertable                 int `json:"alertable"`
 
 	TotalIPsChecked int `json:"total_ips_checked"`
 }
@@ -92,7 +98,26 @@ func runVerify(ctx context.Context, opt options, log *safelog.Logger) error {
 		SchemaVersion: 1, Tool: "certscan", ToolVersion: Version,
 		StartedAt: started, Label: opt.label,
 	}
-	resolver := &scan.SystemResolver{}
+	var resolver scan.Resolver = &scan.SystemResolver{}
+	if len(opt.resolveOvr) > 0 {
+		entries := map[string][]netip.Addr{}
+		for _, s := range opt.resolveOvr {
+			host, addrs, err := scan.ParseResolveEntry(s)
+			if err != nil {
+				return err
+			}
+			entries[host] = append(entries[host], addrs...)
+		}
+		resolver = &scan.StaticResolver{Entries: entries, Fallback: resolver}
+		for host, addrs := range entries {
+			// Say it out loud. A verification run whose DNS was overridden must
+			// never look like one that used real DNS.
+			log.Info("resolve override", safelog.Str("host", host),
+				safelog.Int("addresses", len(addrs)))
+			rep.Notes = append(rep.Notes,
+				fmt.Sprintf("--resolve override in effect: %s -> %v", host, addrs))
+		}
+	}
 	policy := scan.Policy{
 		RatePerSecond: 50, Concurrency: 20, DryRun: opt.dryRun, Offline: !opt.checkPublic,
 	}
@@ -145,7 +170,14 @@ func runVerify(ctx context.Context, opt options, log *safelog.Logger) error {
 			rep.Summary.Unknown++
 		}
 		if r.PartialRollout {
-			rep.Summary.PartialRollouts++
+			if r.Suppressed {
+				// Still listed in full, still in the JSON. Just not counted as
+				// an active finding — announcing one the classifier has
+				// deliberately silenced is how a report loses its credibility.
+				rep.Summary.PartialRolloutsSuppressed++
+			} else {
+				rep.Summary.PartialRollouts++
+			}
 		}
 		if r.FingerprintDivergence {
 			rep.Summary.FingerprintDivergence++
@@ -234,6 +266,10 @@ func printVerifySummary(rep *VerifyReport, opt options) {
 		}
 	}
 
+	if s.PartialRolloutsSuppressed > 0 {
+		fmt.Fprintf(w, "\n  %d partial rollout(s) within a grace window (not alerting)\n",
+			s.PartialRolloutsSuppressed)
+	}
 	if s.PartialRollouts > 0 {
 		fmt.Fprintf(w, "\n  ** %d PARTIAL ROLLOUT(S) **\n", s.PartialRollouts)
 		fmt.Fprintf(w, "     Some addresses serve the expected certificate and some do not.\n")

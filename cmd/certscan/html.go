@@ -166,7 +166,7 @@ tr.bad{background:var(--failbg)}
       {{if not .IPsChecked}}—{{end}}</div></div>
     <div class="step"><h4>Match</h4><div class="v">{{len .IPsMatching}} of {{len .IPsChecked}} checked</div></div>
     <div class="step"><h4>Result</h4><div class="v">
-      {{if .PartialRollout}}<strong style="color:var(--fail)">PARTIAL ROLLOUT</strong>
+      {{if .PartialRollout}}{{if .Suppressed}}<strong style="color:var(--warn)">PARTIAL ROLLOUT (in grace window)</strong>{{else}}<strong style="color:var(--fail)">PARTIAL ROLLOUT</strong>{{end}}
       {{else}}{{.Outcome}}{{end}}</div></div>
   </div>
 

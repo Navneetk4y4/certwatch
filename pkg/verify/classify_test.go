@@ -359,8 +359,18 @@ func TestUnconfirmedExpectationNeverAlerts(t *testing.T) {
 	if r.Alertable {
 		t.Fatal("an unconfirmed expectation produced an alertable result")
 	}
-	if r.Outcome != OutcomeUnknown || r.SubReason != ReasonNoConfirmedExpectation {
-		t.Fatalf("Outcome = %s / %s, want UNKNOWN / %s", r.Outcome, r.SubReason, ReasonNoConfirmedExpectation)
+	// CHANGED 2026-09-19. This previously required UNKNOWN /
+	// no_confirmed_expectation for ALL unconfirmed results. That silenced the
+	// one finding that needs no expectation: the two addresses here serve
+	// DIFFERENT certificates, which is true regardless of what was expected,
+	// and decision_register.md GAP-3 requires divergence to be "evaluated
+	// independently of the expectation comparison".
+	//
+	// The invariant being protected is R1 — never ALERTABLE without
+	// confirmation — and that is asserted above and unchanged. What changed is
+	// visibility, not alerting.
+	if r.Outcome != OutcomeWarning || r.SubReason != ReasonFingerprintDivergence {
+		t.Fatalf("Outcome = %s / %s, want WARNING / %s", r.Outcome, r.SubReason, ReasonFingerprintDivergence)
 	}
 	// Evidence must STILL be recorded — the operator needs to see it to decide
 	// whether to confirm.

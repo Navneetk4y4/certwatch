@@ -111,6 +111,33 @@ type Expectation struct {
 }
 
 // Validate reports whether the expectation is self-consistent.
+// NormaliseFingerprint reduces a SHA-256 fingerprint to bare lowercase hex.
+// It accepts what people actually paste: openssl's uppercase colon-separated
+// form, space-separated bytes, and a leading "sha256:" or "SHA256 Fingerprint="
+// label.
+func NormaliseFingerprint(s string) string {
+	if i := strings.LastIndexAny(s, ":="); i >= 0 && strings.ContainsAny(s[:i+1], "=") {
+		s = s[i+1:]
+	}
+	s = strings.TrimPrefix(strings.ToLower(strings.TrimSpace(s)), "sha256:")
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, r := range s {
+		switch {
+		case r >= '0' && r <= '9', r >= 'a' && r <= 'f':
+			b.WriteRune(r)
+		case r == ':', r == ' ', r == '-', r == '\t', r == '\n', r == '\r':
+			// separator, drop
+		default:
+			// Anything else is not hex. Return the input untouched so the
+			// caller's length check rejects it instead of silently
+			// "normalising" a corrupt value into a plausible one.
+			return strings.ToLower(strings.TrimSpace(s))
+		}
+	}
+	return b.String()
+}
+
 func (e Expectation) Validate() error {
 	if e.Endpoint.Hostname == "" {
 		return fmt.Errorf("verify: expectation has no hostname")
@@ -126,9 +153,9 @@ func (e Expectation) Validate() error {
 		if e.Policy != nil {
 			return fmt.Errorf("verify: %s is pinned but also carries a policy", e.Endpoint)
 		}
-		if len(e.Fingerprint) != 64 {
-			return fmt.Errorf("verify: %s fingerprint is %d chars, want 64 (SHA-256 hex)",
-				e.Endpoint, len(e.Fingerprint))
+		if fp := NormaliseFingerprint(e.Fingerprint); len(fp) != 64 {
+			return fmt.Errorf("verify: %s fingerprint is %d hex chars, want 64 (SHA-256)",
+				e.Endpoint, len(fp))
 		}
 	case ModePolicy:
 		if e.Policy == nil {
@@ -153,6 +180,9 @@ func (e Expectation) Describe() string {
 	case ModePinned:
 		return "certificate " + short(e.Fingerprint)
 	case ModePolicy:
+		if e.Policy == nil {
+			return "policy mode with no policy (invalid)"
+		}
 		var parts []string
 		if len(e.Policy.Issuers) > 0 {
 			parts = append(parts, "issuer ∈ ["+strings.Join(e.Policy.Issuers, " | ")+"]")

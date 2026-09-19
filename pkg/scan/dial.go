@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -112,4 +113,59 @@ func dialByAddress(ctx context.Context, addr netip.Addr, port int, timeout time.
 	}
 	ap := netip.AddrPortFrom(addr, uint16(port))
 	return d.DialContext(ctx, "tcp", ap.String())
+}
+
+// StaticResolver answers from a fixed table, falling back to the system
+// resolver for names it does not know.
+//
+// This is how an endpoint is verified BEFORE a DNS change is published: the
+// new addresses are already serving, but no resolver will return them yet.
+// Without it the only way to test a rollout is to edit /etc/hosts as root,
+// which is also the only way to run this project's own divergence lab.
+//
+// It does NOT bypass any safety check. ResolveAll applies the block list to
+// whatever a resolver returns, and this resolver is subject to exactly the same
+// treatment as DNS — a static entry pointing at a metadata address is refused
+// like any other.
+type StaticResolver struct {
+	Entries  map[string][]netip.Addr
+	Fallback Resolver
+}
+
+func (s *StaticResolver) LookupNetIP(ctx context.Context, network, host string) ([]netip.Addr, error) {
+	if addrs, ok := s.Entries[strings.ToLower(host)]; ok {
+		return append([]netip.Addr(nil), addrs...), nil
+	}
+	if s.Fallback == nil {
+		return nil, fmt.Errorf("scan: %s is not in the --resolve table", host)
+	}
+	return s.Fallback.LookupNetIP(ctx, network, host)
+}
+
+// ParseResolveEntry parses one curl-style "host:ip[,ip...]" override.
+func ParseResolveEntry(s string) (string, []netip.Addr, error) {
+	host, list, ok := strings.Cut(s, ":")
+	if !ok {
+		return "", nil, fmt.Errorf("scan: --resolve %q: want host:ip[,ip...]", s)
+	}
+	host = strings.ToLower(strings.TrimSpace(host))
+	if host == "" {
+		return "", nil, fmt.Errorf("scan: --resolve %q: empty hostname", s)
+	}
+	var addrs []netip.Addr
+	for _, part := range strings.Split(list, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		a, err := netip.ParseAddr(part)
+		if err != nil {
+			return "", nil, fmt.Errorf("scan: --resolve %q: %q is not an IP address", s, part)
+		}
+		addrs = append(addrs, a.Unmap())
+	}
+	if len(addrs) == 0 {
+		return "", nil, fmt.Errorf("scan: --resolve %q: no addresses", s)
+	}
+	return host, addrs, nil
 }

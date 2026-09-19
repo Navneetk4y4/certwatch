@@ -69,6 +69,13 @@ VERIFY  (the core capability)
   --verify FILE Verify each endpoint in FILE against its expected certificate,
                 checking EVERY resolved IP separately. Detects partial rollout:
                 some load-balancer members updated, some not.
+  --resolve HOST:IP[,IP...]
+                Resolve HOST to these addresses instead of asking DNS, like
+                curl's --resolve. Repeatable. Use it to verify a rollout before
+                the DNS change is published, or to reproduce a split pool.
+                Safety checks are unchanged: an override pointing at a blocked
+                address is refused exactly as a DNS answer would be.
+
   --propose-expectations FILE
                 After a scan, write a proposed expectations file from what was
                 found. Every entry starts UNCONFIRMED and cannot alert until a
@@ -122,6 +129,7 @@ type options struct {
 	logLevel    string
 	showVersion bool
 	verifyFile  string
+	resolveOvr  multiFlag
 	htmlOut     string
 	proposeOut  string
 }
@@ -179,6 +187,7 @@ func parseFlags() options {
 	fs.StringVar(&o.logLevel, "log-level", "info", "debug, info, warn or error")
 	fs.BoolVar(&o.showVersion, "version", false, "print the version and exit")
 	fs.StringVar(&o.verifyFile, "verify", "", "verify endpoints against an expectations file")
+	fs.Var(&o.resolveOvr, "resolve", "host:ip[,ip...] — resolve this name to these addresses instead of using DNS (repeatable)")
 	fs.StringVar(&o.htmlOut, "html", "", "write a self-contained HTML report here")
 	fs.StringVar(&o.proposeOut, "propose-expectations", "", "write a proposed expectations file from what was found")
 
@@ -186,3 +195,9 @@ func parseFlags() options {
 	o.format = strings.ToLower(strings.TrimSpace(o.format))
 	return o
 }
+
+// multiFlag collects a repeatable string flag.
+type multiFlag []string
+
+func (m *multiFlag) String() string     { return strings.Join(*m, ",") }
+func (m *multiFlag) Set(v string) error { *m = append(*m, v); return nil }
