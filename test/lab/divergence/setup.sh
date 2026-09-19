@@ -16,7 +16,13 @@
 # the product exists to scan. The alias lives on lo0 so no real interface is
 # touched and nothing is exposed off this machine.
 #
-# REQUIRES sudo for the interface aliases only. Everything else is unprivileged.
+# REQUIRES sudo for the interface aliases ONLY. Everything else is unprivileged.
+#
+# It no longer touches /etc/hosts. That step could only ever give the hostname
+# ONE address, which is the exact thing this lab needs two of, so the "true"
+# test previously needed a local dnsmasq. certscan --resolve supplies both
+# addresses directly. The block list still applies to those addresses, so this
+# is a DNS shortcut, not a safety one.
 #
 #   ./setup.sh          create the lab
 #   ./setup.sh teardown remove it
@@ -65,15 +71,9 @@ done
 echo "   certificate A: $(openssl x509 -in "$DIR/certs/a.crt" -noout -fingerprint -sha256 | cut -d= -f2 | tr -d : | tr 'A-Z' 'a-z' | cut -c1-16)"
 echo "   certificate B: $(openssl x509 -in "$DIR/certs/b.crt" -noout -fingerprint -sha256 | cut -d= -f2 | tr -d : | tr 'A-Z' 'a-z' | cut -c1-16)"
 
-echo "== 3. /etc/hosts entry (needs sudo) =="
-if ! grep -q "$HOST" /etc/hosts 2>/dev/null; then
-  echo "$IP_A $HOST" | sudo tee -a /etc/hosts >/dev/null
-  echo "   added: $IP_A $HOST"
-  echo "   NOTE: /etc/hosts gives ONE address. For a true multi-A test you need a"
-  echo "         resolver that returns both — see dnsmasq note in README.md."
-else
-  echo "   already present"
-fi
+echo "== 3. DNS =="
+echo "   not touching /etc/hosts — certscan --resolve supplies both addresses,"
+echo "   which /etc/hosts cannot do."
 
 echo "== 4. starting backends =="
 ( exec -a divergence-backend-a \
@@ -98,6 +98,9 @@ LAB READY.
   hostname : $HOST
   member A : $IP_A:$PORT   (expected certificate)
   member B : $IP_B:$PORT   (stale certificate -- the partial-rollout case)
+
+  Verify it:
+    certscan --verify expected.json --resolve $HOST:$IP_A,$IP_B --html report.html
 
 A hostname-level monitor sees ONE of these and reports healthy.
 A per-IP verifier sees BOTH and reports the divergence.
