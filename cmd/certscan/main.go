@@ -65,8 +65,18 @@ SAFETY
                 reachable from the internet. OFF by default; this is the only
                 outbound traffic besides the targets themselves.
 
+VERIFY  (the core capability)
+  --verify FILE Verify each endpoint in FILE against its expected certificate,
+                checking EVERY resolved IP separately. Detects partial rollout:
+                some load-balancer members updated, some not.
+  --propose-expectations FILE
+                After a scan, write a proposed expectations file from what was
+                found. Every entry starts UNCONFIRMED and cannot alert until a
+                human confirms it.
+
 OUTPUT
   --out         Write the JSON report here (default: stdout).
+  --html FILE   Write a self-contained HTML report (no external assets).
   --format      json or csv (default json).
   --label       A label for this environment, recorded in the report so results
                 from different environments can be compared.
@@ -81,6 +91,11 @@ EXAMPLES
 
   # Check named hosts and read a certificate directory.
   certscan --hosts api.example.com,vpn.example.com --dirs /etc/ssl/certs
+
+  # The core loop: discover, propose expectations, confirm them, then verify.
+  certscan --cidr 10.20.0.0/22 --propose-expectations expected.json
+  $EDITOR expected.json                      # set "confirmed": true
+  certscan --verify expected.json --html report.html
 
 WHAT THIS TOOL DOES NOT DO
   It completes a TLS handshake and closes the connection. It sends no
@@ -106,6 +121,9 @@ type options struct {
 	label       string
 	logLevel    string
 	showVersion bool
+	verifyFile  string
+	htmlOut     string
+	proposeOut  string
 }
 
 func main() {
@@ -128,7 +146,11 @@ func main() {
 	ctx, stopSignals := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stopSignals()
 
-	if err := run(ctx, opt, log); err != nil {
+	runner := run
+	if opt.verifyFile != "" {
+		runner = runVerify
+	}
+	if err := runner(ctx, opt, log); err != nil {
 		log.Error("scan failed", safelog.Err(err))
 		fmt.Fprintf(os.Stderr, "certscan: %v\n", err)
 		os.Exit(1)
@@ -156,6 +178,9 @@ func parseFlags() options {
 	fs.StringVar(&o.label, "label", "", "environment label recorded in the report")
 	fs.StringVar(&o.logLevel, "log-level", "info", "debug, info, warn or error")
 	fs.BoolVar(&o.showVersion, "version", false, "print the version and exit")
+	fs.StringVar(&o.verifyFile, "verify", "", "verify endpoints against an expectations file")
+	fs.StringVar(&o.htmlOut, "html", "", "write a self-contained HTML report here")
+	fs.StringVar(&o.proposeOut, "propose-expectations", "", "write a proposed expectations file from what was found")
 
 	_ = fs.Parse(os.Args[1:])
 	o.format = strings.ToLower(strings.TrimSpace(o.format))

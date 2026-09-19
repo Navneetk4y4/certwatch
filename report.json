@@ -1,0 +1,495 @@
+{
+  "schema_version": 1,
+  "tool": "certscan",
+  "tool_version": "0.1.0-dev",
+  "started_at": "2026-09-19T08:33:56.037353Z",
+  "finished_at": "2026-09-19T08:34:02.043859Z",
+  "duration_seconds": 6.006506,
+  "scope": {
+    "hostnames": [
+      "example.com"
+    ],
+    "ports": [
+      443,
+      636,
+      993,
+      995,
+      5671,
+      8443,
+      8883,
+      9443
+    ],
+    "dry_run": false,
+    "offline": true,
+    "rate_limit_per_second": 50,
+    "concurrency": 20
+  },
+  "coverage": {
+    "targets_requested": 32,
+    "targets_attempted": 32,
+    "targets_skipped": 0,
+    "targets_unreachable": 24,
+    "targets_not_attempted": 0,
+    "deadline_hit": false,
+    "filesystem_walk_truncated": false
+  },
+  "summary": {
+    "unique_certificates": 4,
+    "total_observations": 32,
+    "endpoints_responding": 8,
+    "publicly_resolvable": 0,
+    "not_publicly_resolvable": 0,
+    "resolvability_unknown": 4,
+    "expiring_within_7_days": 0,
+    "expiring_within_30_days": 0,
+    "expiring_within_60_days": 1,
+    "already_expired": 0,
+    "not_yet_valid": 0,
+    "self_signed": 0,
+    "chain_incomplete": 0,
+    "by_issuer": {
+      "CN=AAA Certificate Services,O=Comodo CA Limited,L=Salford,ST=Greater Manchester,C=GB": 1,
+      "CN=Cloudflare TLS Issuing ECC CA 3,O=SSL Corporation,C=US": 1,
+      "CN=SSL.com TLS ECC Root CA 2022,O=SSL Corporation,C=US": 1,
+      "CN=SSL.com TLS Transit ECC CA R2,O=SSL Corporation,C=US": 1
+    },
+    "by_key_algorithm": {
+      "ECDSA": 4
+    },
+    "by_tls_version": {
+      "TLS1.3": 8
+    },
+    "by_parse_status": {
+      "ok": 4
+    },
+    "ip_disagreements": 0
+  },
+  "certificates": [
+    {
+      "certificate": {
+        "sha256": "6153a96fd1a6ab7f4d438fc34932484299d0729d9140b3a126bb2f9c07b02200",
+        "serial": "0624d0ab311558780b7d5213b9631831",
+        "subject_dn": "CN=example.com",
+        "subject_cn": "example.com",
+        "sans": [
+          "DNS:*.example.com",
+          "DNS:example.com"
+        ],
+        "issuer_dn": "CN=Cloudflare TLS Issuing ECC CA 3,O=SSL Corporation,C=US",
+        "issuer_key_id": "8303fde7f6f54a4d1541f4ed2216d3320a3eca66",
+        "not_before": "2026-07-29T22:10:08Z",
+        "not_after": "2026-10-27T22:17:21Z",
+        "key_algorithm": "ECDSA",
+        "key_size": 256,
+        "signature_algorithm": "ECDSA-SHA256",
+        "is_ca": false,
+        "is_self_signed": false,
+        "key_usage": [
+          "digitalSignature"
+        ],
+        "ext_key_usage": [
+          "serverAuth"
+        ],
+        "parse_status": "ok",
+        "raw_der_length": 1002
+      },
+      "seen_at": [
+        "104.20.23.154:443",
+        "104.20.23.154:8443",
+        "172.66.147.243:443",
+        "172.66.147.243:8443",
+        "2606:4700:10::6814:179a:443",
+        "2606:4700:10::6814:179a:8443",
+        "2606:4700:10::ac42:93f3:443",
+        "2606:4700:10::ac42:93f3:8443"
+      ],
+      "sources": [
+        "network"
+      ],
+      "publicly_resolvable": null
+    },
+    {
+      "certificate": {
+        "sha256": "ba06d3d3e348fce7478cc84b422d0e638e9e221ef1a0b53adc14cc70e04b8ab8",
+        "serial": "173dca60ea9f8e1026dafcd72810e48e",
+        "subject_dn": "CN=SSL.com TLS ECC Root CA 2022,O=SSL Corporation,C=US",
+        "subject_cn": "SSL.com TLS ECC Root CA 2022",
+        "sans": [],
+        "issuer_dn": "CN=AAA Certificate Services,O=Comodo CA Limited,L=Salford,ST=Greater Manchester,C=GB",
+        "issuer_key_id": "a0110a233e96f107ece2af29ef82a57fd030a4b4",
+        "subject_key_id": "898f2fa3e82ba014547bf356b8265f67380b9cd0",
+        "not_before": "2025-08-01T00:00:00Z",
+        "not_after": "2028-12-31T23:59:59Z",
+        "key_algorithm": "ECDSA",
+        "key_size": 384,
+        "signature_algorithm": "SHA256-RSA",
+        "is_ca": true,
+        "is_self_signed": false,
+        "key_usage": [
+          "digitalSignature",
+          "keyCertSign",
+          "cRLSign"
+        ],
+        "ext_key_usage": [
+          "clientAuth",
+          "serverAuth"
+        ],
+        "parse_status": "ok",
+        "raw_der_length": 1090
+      },
+      "seen_at": [
+        "104.20.23.154:443",
+        "104.20.23.154:8443",
+        "172.66.147.243:443",
+        "172.66.147.243:8443",
+        "2606:4700:10::6814:179a:443",
+        "2606:4700:10::6814:179a:8443",
+        "2606:4700:10::ac42:93f3:443",
+        "2606:4700:10::ac42:93f3:8443"
+      ],
+      "sources": [
+        "network-chain"
+      ],
+      "publicly_resolvable": null
+    },
+    {
+      "certificate": {
+        "sha256": "f15f29abef73aa4dd9ab754baeae3685bdd3874b46b525071177628685718026",
+        "serial": "31eee88afb87cd9ef8336604743f9b27",
+        "subject_dn": "CN=Cloudflare TLS Issuing ECC CA 3,O=SSL Corporation,C=US",
+        "subject_cn": "Cloudflare TLS Issuing ECC CA 3",
+        "sans": [],
+        "issuer_dn": "CN=SSL.com TLS Transit ECC CA R2,O=SSL Corporation,C=US",
+        "issuer_key_id": "32a2c7d8588bff7fc03cf2556933eccecc1fbc97",
+        "subject_key_id": "8303fde7f6f54a4d1541f4ed2216d3320a3eca66",
+        "not_before": "2025-05-29T19:49:45Z",
+        "not_after": "2035-05-27T19:49:44Z",
+        "key_algorithm": "ECDSA",
+        "key_size": 256,
+        "signature_algorithm": "ECDSA-SHA384",
+        "is_ca": true,
+        "is_self_signed": false,
+        "key_usage": [
+          "digitalSignature",
+          "keyCertSign",
+          "cRLSign"
+        ],
+        "ext_key_usage": [
+          "clientAuth",
+          "serverAuth"
+        ],
+        "parse_status": "ok",
+        "raw_der_length": 742
+      },
+      "seen_at": [
+        "104.20.23.154:443",
+        "104.20.23.154:8443",
+        "172.66.147.243:443",
+        "172.66.147.243:8443",
+        "2606:4700:10::6814:179a:443",
+        "2606:4700:10::6814:179a:8443",
+        "2606:4700:10::ac42:93f3:443",
+        "2606:4700:10::ac42:93f3:8443"
+      ],
+      "sources": [
+        "network-chain"
+      ],
+      "publicly_resolvable": null
+    },
+    {
+      "certificate": {
+        "sha256": "5d1bc399274e649e1c72697de91a54ad725088c5221cb61e17ee9c290bc42a92",
+        "serial": "604d8af8d00ba8748b955853172c5f2e",
+        "subject_dn": "CN=SSL.com TLS Transit ECC CA R2,O=SSL Corporation,C=US",
+        "subject_cn": "SSL.com TLS Transit ECC CA R2",
+        "sans": [],
+        "issuer_dn": "CN=SSL.com TLS ECC Root CA 2022,O=SSL Corporation,C=US",
+        "issuer_key_id": "898f2fa3e82ba014547bf356b8265f67380b9cd0",
+        "subject_key_id": "32a2c7d8588bff7fc03cf2556933eccecc1fbc97",
+        "not_before": "2022-10-21T17:02:23Z",
+        "not_after": "2037-10-17T17:02:22Z",
+        "key_algorithm": "ECDSA",
+        "key_size": 384,
+        "signature_algorithm": "ECDSA-SHA384",
+        "is_ca": true,
+        "is_self_signed": false,
+        "key_usage": [
+          "digitalSignature",
+          "keyCertSign",
+          "cRLSign"
+        ],
+        "ext_key_usage": [
+          "clientAuth",
+          "serverAuth"
+        ],
+        "parse_status": "ok",
+        "raw_der_length": 824
+      },
+      "seen_at": [
+        "104.20.23.154:443",
+        "104.20.23.154:8443",
+        "172.66.147.243:443",
+        "172.66.147.243:8443",
+        "2606:4700:10::6814:179a:443",
+        "2606:4700:10::6814:179a:8443",
+        "2606:4700:10::ac42:93f3:443",
+        "2606:4700:10::ac42:93f3:8443"
+      ],
+      "sources": [
+        "network-chain"
+      ],
+      "publicly_resolvable": null
+    }
+  ],
+  "endpoints": [
+    {
+      "hostname": "example.com",
+      "address": "104.20.23.154",
+      "port": 443,
+      "sni_sent": "example.com",
+      "tls_version": "TLS1.3",
+      "cipher_suite": "TLS_AES_128_GCM_SHA256",
+      "leaf_sha256": "6153a96fd1a6ab7f4d438fc34932484299d0729d9140b3a126bb2f9c07b02200",
+      "chain_length": 4
+    },
+    {
+      "hostname": "example.com",
+      "address": "104.20.23.154",
+      "port": 636,
+      "sni_sent": "example.com",
+      "error": "dial tcp 104.20.23.154:636: i/o timeout"
+    },
+    {
+      "hostname": "example.com",
+      "address": "104.20.23.154",
+      "port": 993,
+      "sni_sent": "example.com",
+      "error": "dial tcp 104.20.23.154:993: i/o timeout"
+    },
+    {
+      "hostname": "example.com",
+      "address": "104.20.23.154",
+      "port": 995,
+      "sni_sent": "example.com",
+      "error": "dial tcp 104.20.23.154:995: i/o timeout"
+    },
+    {
+      "hostname": "example.com",
+      "address": "104.20.23.154",
+      "port": 5671,
+      "sni_sent": "example.com",
+      "error": "dial tcp 104.20.23.154:5671: i/o timeout"
+    },
+    {
+      "hostname": "example.com",
+      "address": "104.20.23.154",
+      "port": 8443,
+      "sni_sent": "example.com",
+      "tls_version": "TLS1.3",
+      "cipher_suite": "TLS_AES_128_GCM_SHA256",
+      "leaf_sha256": "6153a96fd1a6ab7f4d438fc34932484299d0729d9140b3a126bb2f9c07b02200",
+      "chain_length": 4
+    },
+    {
+      "hostname": "example.com",
+      "address": "104.20.23.154",
+      "port": 8883,
+      "sni_sent": "example.com",
+      "error": "dial tcp 104.20.23.154:8883: i/o timeout"
+    },
+    {
+      "hostname": "example.com",
+      "address": "104.20.23.154",
+      "port": 9443,
+      "sni_sent": "example.com",
+      "error": "dial tcp 104.20.23.154:9443: i/o timeout"
+    },
+    {
+      "hostname": "example.com",
+      "address": "172.66.147.243",
+      "port": 443,
+      "sni_sent": "example.com",
+      "tls_version": "TLS1.3",
+      "cipher_suite": "TLS_AES_128_GCM_SHA256",
+      "leaf_sha256": "6153a96fd1a6ab7f4d438fc34932484299d0729d9140b3a126bb2f9c07b02200",
+      "chain_length": 4
+    },
+    {
+      "hostname": "example.com",
+      "address": "172.66.147.243",
+      "port": 636,
+      "sni_sent": "example.com",
+      "error": "dial tcp 172.66.147.243:636: i/o timeout"
+    },
+    {
+      "hostname": "example.com",
+      "address": "172.66.147.243",
+      "port": 993,
+      "sni_sent": "example.com",
+      "error": "dial tcp 172.66.147.243:993: i/o timeout"
+    },
+    {
+      "hostname": "example.com",
+      "address": "172.66.147.243",
+      "port": 995,
+      "sni_sent": "example.com",
+      "error": "dial tcp 172.66.147.243:995: i/o timeout"
+    },
+    {
+      "hostname": "example.com",
+      "address": "172.66.147.243",
+      "port": 5671,
+      "sni_sent": "example.com",
+      "error": "dial tcp 172.66.147.243:5671: i/o timeout"
+    },
+    {
+      "hostname": "example.com",
+      "address": "172.66.147.243",
+      "port": 8443,
+      "sni_sent": "example.com",
+      "tls_version": "TLS1.3",
+      "cipher_suite": "TLS_AES_128_GCM_SHA256",
+      "leaf_sha256": "6153a96fd1a6ab7f4d438fc34932484299d0729d9140b3a126bb2f9c07b02200",
+      "chain_length": 4
+    },
+    {
+      "hostname": "example.com",
+      "address": "172.66.147.243",
+      "port": 8883,
+      "sni_sent": "example.com",
+      "error": "dial tcp 172.66.147.243:8883: i/o timeout"
+    },
+    {
+      "hostname": "example.com",
+      "address": "172.66.147.243",
+      "port": 9443,
+      "sni_sent": "example.com",
+      "error": "dial tcp 172.66.147.243:9443: i/o timeout"
+    },
+    {
+      "hostname": "example.com",
+      "address": "2606:4700:10::6814:179a",
+      "port": 443,
+      "sni_sent": "example.com",
+      "tls_version": "TLS1.3",
+      "cipher_suite": "TLS_AES_128_GCM_SHA256",
+      "leaf_sha256": "6153a96fd1a6ab7f4d438fc34932484299d0729d9140b3a126bb2f9c07b02200",
+      "chain_length": 4
+    },
+    {
+      "hostname": "example.com",
+      "address": "2606:4700:10::6814:179a",
+      "port": 636,
+      "sni_sent": "example.com",
+      "error": "dial tcp [2606:4700:10::6814:179a]:636: i/o timeout"
+    },
+    {
+      "hostname": "example.com",
+      "address": "2606:4700:10::6814:179a",
+      "port": 993,
+      "sni_sent": "example.com",
+      "error": "dial tcp [2606:4700:10::6814:179a]:993: i/o timeout"
+    },
+    {
+      "hostname": "example.com",
+      "address": "2606:4700:10::6814:179a",
+      "port": 995,
+      "sni_sent": "example.com",
+      "error": "dial tcp [2606:4700:10::6814:179a]:995: i/o timeout"
+    },
+    {
+      "hostname": "example.com",
+      "address": "2606:4700:10::6814:179a",
+      "port": 5671,
+      "sni_sent": "example.com",
+      "error": "dial tcp [2606:4700:10::6814:179a]:5671: i/o timeout"
+    },
+    {
+      "hostname": "example.com",
+      "address": "2606:4700:10::6814:179a",
+      "port": 8443,
+      "sni_sent": "example.com",
+      "tls_version": "TLS1.3",
+      "cipher_suite": "TLS_AES_128_GCM_SHA256",
+      "leaf_sha256": "6153a96fd1a6ab7f4d438fc34932484299d0729d9140b3a126bb2f9c07b02200",
+      "chain_length": 4
+    },
+    {
+      "hostname": "example.com",
+      "address": "2606:4700:10::6814:179a",
+      "port": 8883,
+      "sni_sent": "example.com",
+      "error": "dial tcp [2606:4700:10::6814:179a]:8883: i/o timeout"
+    },
+    {
+      "hostname": "example.com",
+      "address": "2606:4700:10::6814:179a",
+      "port": 9443,
+      "sni_sent": "example.com",
+      "error": "dial tcp [2606:4700:10::6814:179a]:9443: i/o timeout"
+    },
+    {
+      "hostname": "example.com",
+      "address": "2606:4700:10::ac42:93f3",
+      "port": 443,
+      "sni_sent": "example.com",
+      "tls_version": "TLS1.3",
+      "cipher_suite": "TLS_AES_128_GCM_SHA256",
+      "leaf_sha256": "6153a96fd1a6ab7f4d438fc34932484299d0729d9140b3a126bb2f9c07b02200",
+      "chain_length": 4
+    },
+    {
+      "hostname": "example.com",
+      "address": "2606:4700:10::ac42:93f3",
+      "port": 636,
+      "sni_sent": "example.com",
+      "error": "dial tcp [2606:4700:10::ac42:93f3]:636: i/o timeout"
+    },
+    {
+      "hostname": "example.com",
+      "address": "2606:4700:10::ac42:93f3",
+      "port": 993,
+      "sni_sent": "example.com",
+      "error": "dial tcp [2606:4700:10::ac42:93f3]:993: i/o timeout"
+    },
+    {
+      "hostname": "example.com",
+      "address": "2606:4700:10::ac42:93f3",
+      "port": 995,
+      "sni_sent": "example.com",
+      "error": "dial tcp [2606:4700:10::ac42:93f3]:995: i/o timeout"
+    },
+    {
+      "hostname": "example.com",
+      "address": "2606:4700:10::ac42:93f3",
+      "port": 5671,
+      "sni_sent": "example.com",
+      "error": "dial tcp [2606:4700:10::ac42:93f3]:5671: i/o timeout"
+    },
+    {
+      "hostname": "example.com",
+      "address": "2606:4700:10::ac42:93f3",
+      "port": 8443,
+      "sni_sent": "example.com",
+      "tls_version": "TLS1.3",
+      "cipher_suite": "TLS_AES_128_GCM_SHA256",
+      "leaf_sha256": "6153a96fd1a6ab7f4d438fc34932484299d0729d9140b3a126bb2f9c07b02200",
+      "chain_length": 4
+    },
+    {
+      "hostname": "example.com",
+      "address": "2606:4700:10::ac42:93f3",
+      "port": 8883,
+      "sni_sent": "example.com",
+      "error": "dial tcp [2606:4700:10::ac42:93f3]:8883: i/o timeout"
+    },
+    {
+      "hostname": "example.com",
+      "address": "2606:4700:10::ac42:93f3",
+      "port": 9443,
+      "sni_sent": "example.com",
+      "error": "dial tcp [2606:4700:10::ac42:93f3]:9443: i/o timeout"
+    }
+  ],
+  "skips": null
+}

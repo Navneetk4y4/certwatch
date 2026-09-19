@@ -15,6 +15,7 @@ import (
 	"github.com/certwatch/certwatch/pkg/safeio"
 	"github.com/certwatch/certwatch/pkg/safelog"
 	"github.com/certwatch/certwatch/pkg/scan"
+	"github.com/certwatch/certwatch/pkg/verify"
 	"github.com/certwatch/certwatch/pkg/x509norm"
 )
 
@@ -99,6 +100,18 @@ func run(ctx context.Context, opt options, log *safelog.Logger) error {
 
 	if err := writeReport(rep, opt); err != nil {
 		return err
+	}
+	if opt.proposeOut != "" {
+		n, err := proposeExpectations(rep, opt.proposeOut)
+		if err != nil {
+			return err
+		}
+		log.Info("proposed expectations", safelog.Int("endpoints", n),
+			safelog.Path("file", opt.proposeOut))
+		fmt.Fprintf(os.Stderr, "\n  %d proposed expectation(s) written to %s\n", n, opt.proposeOut)
+		fmt.Fprintf(os.Stderr, "  ALL are unconfirmed and cannot alert. Review them, set\n")
+		fmt.Fprintf(os.Stderr, "  \"confirmed\": true on the ones you endorse, then:\n")
+		fmt.Fprintf(os.Stderr, "    certscan --verify %s --html report.html\n", opt.proposeOut)
 	}
 	printHumanSummary(rep, opt)
 	return nil
@@ -370,4 +383,101 @@ func dedupe(in []string) []string {
 		}
 	}
 	return out
+}
+
+// proposeExpectations writes a starting expectations file from what a scan
+// found.
+//
+// EVERY entry starts UNCONFIRMED. That is not a formality: a proposed baseline
+// is whatever happened to be there, which may already be wrong — an expired
+// certificate, a default vhost, a half-completed rollout. Alerting on a state
+// no human endorsed is how trust-on-first-use turns a broken estate into a
+// "healthy" one. A human confirms, once, and only then can it alert.
+//
+// Mode is inferred from the observed issuer so the customer is not asked a
+// question per endpoint: an issuer indicating automation gets policy mode,
+// because pinning an auto-renewing endpoint alarms on every legitimate renewal.
+func proposeExpectations(rep *model.Report, path string) (int, error) {
+	type hostState struct {
+		port int
+		sni  string
+		cert *model.Certificate
+		fps  map[string]bool
+	}
+	byHost := map[string]*hostState{}
+
+	for _, ep := range rep.Endpoints {
+		if ep.LeafFingerprint == "" || ep.Hostname == "" {
+			continue
+		}
+		h := byHost[ep.Hostname]
+		if h == nil {
+			h = &hostState{port: ep.Port, sni: ep.SNISent, fps: map[string]bool{}}
+			byHost[ep.Hostname] = h
+		}
+		h.fps[ep.LeafFingerprint] = true
+		if h.cert == nil {
+			for i := range rep.Certificates {
+				if rep.Certificates[i].Certificate.Fingerprint == ep.LeafFingerprint {
+					h.cert = rep.Certificates[i].Certificate
+					break
+				}
+			}
+		}
+	}
+
+	ef := ExpectationFile{Version: 1, GeneratedAt: time.Now().UTC()}
+	hosts := make([]string, 0, len(byHost))
+	for h := range byHost {
+		hosts = append(hosts, h)
+	}
+	sort.Strings(hosts)
+
+	for _, host := range hosts {
+		h := byHost[host]
+		if h.cert == nil {
+			continue
+		}
+		sni := h.sni
+		if sni == host {
+			sni = ""
+		}
+		e := verify.Expectation{
+			Endpoint:  verify.Endpoint{Hostname: host, Port: h.port, SNI: sni},
+			Confirmed: false, // ALWAYS. See the doc comment.
+			Source:    "proposed_from_observation",
+		}
+		mode, _ := verify.InferMode(h.cert.IssuerDN)
+
+		// A host already serving DIFFERENT certificates on different addresses
+		// cannot be pinned to one of them — that would declare one arbitrary
+		// member correct. Policy mode describes the property they share.
+		if len(h.fps) > 1 {
+			mode = verify.ModePolicy
+		}
+
+		switch mode {
+		case verify.ModePolicy:
+			e.Mode = verify.ModePolicy
+			e.Policy = &verify.Policy{
+				Issuers:          []string{h.cert.IssuerDN},
+				RequireSANMatch:  true,
+				MinDaysRemaining: 14,
+			}
+		default:
+			e.Mode = verify.ModePinned
+			e.Fingerprint = h.cert.Fingerprint
+		}
+		ef.Expectations = append(ef.Expectations, e)
+	}
+
+	payload, err := json.MarshalIndent(ef, "", "  ")
+	if err != nil {
+		return 0, err
+	}
+	payload = append(payload, '\n')
+	if err := os.WriteFile(path, payload, 0o644); err != nil { //nolint:gosec // user-named path
+		return 0, fmt.Errorf("writing expectations: %w", err)
+	}
+	return len(ef.Expectations), nil
 }

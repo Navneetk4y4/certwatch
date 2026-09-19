@@ -39,6 +39,9 @@ import (
 // A hostname-level monitor connects once, gets whichever address answers, and
 // reports healthy. This must not.
 
+// usedIPs tracks which distinct addresses are already bound in this test run.
+var usedIPs = map[string]bool{}
+
 // labBackend is one TLS server standing in for a load-balancer pool member.
 type labBackend struct {
 	ln      net.Listener
@@ -47,6 +50,12 @@ type labBackend struct {
 	certDER []byte
 	name    string
 }
+
+// distinctIPs are genuinely different addresses on this host, not one address
+// with different ports. The whole claim is that every address a hostname
+// resolves to is checked separately; a fixture using ports would not exercise
+// it, and an earlier version of this file had exactly that weakness.
+var distinctIPs = []string{"127.0.2.2", "127.0.2.3", "127.0.2.4", "127.0.2.5"}
 
 func startBackend(t *testing.T, serverName, certCN string) *labBackend {
 	t.Helper()
@@ -67,9 +76,26 @@ func startBackend(t *testing.T, serverName, certCN string) *labBackend {
 	}
 	cert := tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key}
 
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
+	// Each backend gets its own IP address.
+	var ln net.Listener
+	var lastErr error
+	for _, ip := range distinctIPs {
+		if usedIPs[ip] {
+			continue
+		}
+		l, err := net.Listen("tcp", net.JoinHostPort(ip, "0"))
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		usedIPs[ip] = true
+		t.Cleanup(func() { delete(usedIPs, ip) })
+		ln = l
+		break
+	}
+	if ln == nil {
+		t.Skipf("no distinct loopback alias available (need 127.0.2.2+): %v.\n"+
+			"Create them with: sudo ifconfig lo0 alias 127.0.2.2", lastErr)
 	}
 	ap := netip.MustParseAddrPort(ln.Addr().String())
 	b := &labBackend{ln: ln, addr: ap.Addr(), port: int(ap.Port()), certDER: der, name: certCN}
@@ -186,6 +212,16 @@ func TestDetectsPerIPCertificateDivergence(t *testing.T) {
 	staleFP := x509norm.Fingerprint(stale.certDER)
 	if byFingerprint[expFP] == "" || byFingerprint[staleFP] == "" {
 		t.Fatalf("the report does not attribute each certificate to an address: %+v", byFingerprint)
+	}
+	// GENUINELY DIFFERENT ADDRESSES. This assertion is the one that was missing
+	// before: the earlier fixture distinguished backends by PORT, so it could
+	// not prove per-address attribution at all.
+	if byFingerprint[expFP] == byFingerprint[staleFP] {
+		t.Fatalf("both certificates attributed to the same address %s; the fixture is not "+
+			"testing cross-IP behaviour", byFingerprint[expFP])
+	}
+	if expected.addr == stale.addr {
+		t.Fatal("fixture error: both backends share an IP address")
 	}
 	t.Logf("DIVERGENCE DETECTED: %s served %s, %s served %s",
 		byFingerprint[expFP], expFP[:16], byFingerprint[staleFP], staleFP[:16])
