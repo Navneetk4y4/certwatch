@@ -94,7 +94,7 @@ jq '.summary.ip_disagreements, .summary.unique_certificates' /tmp/lab.json
 
 `hostrepute.com` returns **HTTP 403** to every automated request (Cloudflare, Ray ID
 `a3dc83e238493ed9`). Account creation is also not something I can do. Findings from public
-material are in `../../../project_1/competitive_kill_test_2026_09_20.md` and are labelled
+material are in the internal `competitive_kill_test_2026_09_20.md` and are labelled
 `VENDOR CLAIM, SEARCH-INDEX MEDIATED` — **not** behavioural observation. Result: A = NO
 (monitors are added and metered per slot), C = YES (claimed). **NO-GO A not triggered.**
 

@@ -87,3 +87,16 @@ Modules: `aws-sdk-go-v2`, `config`, `credentials`, `service/acm`,
 3. `govulncheck` blocks on HIGH.
 4. The SBOM is diffed against the previous release; an unexpected addition fails the build.
 5. If it parses untrusted input, it goes in the fuzz corpus.
+
+---
+
+## A note on document references
+
+Names like `decision_register.md`, `product_specification.md` and
+`project_1_security_model.md` appear throughout this repository as **citations to internal
+planning documents**. Those documents are not part of the open-source distribution and no
+file of that name exists here — the reference records *why* a decision was made and where
+the reasoning lives, not a file you can open.
+
+Everything needed to build, test and audit this code is in the repository. The shipped
+documents are `../README.md`, `../CODEMAP.md`, `security-model.md` and this file.
