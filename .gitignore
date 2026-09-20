@@ -1,4 +1,19 @@
+# Build output. `make build` writes here; nothing in it is ever committed.
 /build/
-coverage.out
+
+# Binaries accidentally built into the repo root. Two of these were committed
+# once (22 MB); these lines are why it cannot happen again.
+/certscan
+/certscan-aws
+
+# Test and coverage output
 *.test
+coverage.out
+
+# Scan output. certscan writes reports wherever it is pointed; a stray one was
+# committed once.
+/report.json
+/*.report.json
+
+# macOS
 .DS_Store
