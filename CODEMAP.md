@@ -190,6 +190,22 @@ nobody should trust*), `aws_test.go` (114 L, 5).
 
 ---
 
+## Remaining test files
+
+Named for completeness — every one of the 77 files appears somewhere in this map.
+
+| File | L | Covers |
+|---|---|---|
+| `internal/scopecfg/scope_test.go` | 306 | 12 tests — malformed scope is an error not a best-effort guess; `TestServerCannotWidenScope` and `TestExclusionsWin` pin the narrow-only rule |
+| `internal/tools/importcheck/main_test.go` | 262 | 6 tests — the **exception lists are asserted to an exact length**, so the private-key boundary has to be re-argued in a diff if either grows |
+| `pkg/safelog/safelog_test.go` | 147 | 8 tests — fingerprints truncated before reaching a log line, level filtering, and that the field constructors are typed-only |
+| `test/corpus/generate_test.go` | 50 | 2 tests — the committed corpus is present, large enough, self-describing, and loads identically every time |
+| `pkg/x509norm/helper_test.go` | 13 | `corpusLoad` helper |
+| `pkg/x509norm/pemhelp_test.go` | 8 | `pemEncode` helper |
+| `test/canary/b64_test.go` | 6 | `encodeStd` helper |
+
+---
+
 ## What is not here
 
 No server, no database, no HTTP handlers, no scheduler, no alerting, no auth, no UI code.
