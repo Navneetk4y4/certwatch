@@ -17,13 +17,38 @@ import (
 //	docker compose -f test/lab/docker-compose.aws.yml up -d
 //	go test ./pkg/discover/aws/ -tags=localstack -count=1
 //
-// STATUS AT THE TIME OF WRITING: this suite is WRITTEN BUT NOT EXECUTED. The
-// Docker daemon was not running in the development environment, so the
-// assertions below have never been observed to pass or fail. They must be run
-// before the AWS enumerator is used against a real account, and the milestone
-// report says so rather than implying coverage that does not exist.
+// EXECUTED 2026-09-20 against localstack/localstack:3.8. All four tests pass.
+//
+// First run exposed something the suite could not have told us before: with an
+// empty LocalStack it reported findings=0 gaps=3 and still passed, because
+// community LocalStack implements neither elbv2 nor cloudfront. So the suite
+// proved that GAPS are handled correctly and proved nothing whatever about
+// enumeration finding a certificate.
+//
+// seedACM below fixes that by importing a real certificate first, and
+// TestLocalStackFindsASeededCertificate asserts it comes back. Without that,
+// "the AWS suite passes" was a statement about error handling wearing the
+// costume of a statement about discovery.
 
 const localstackEndpoint = "http://localhost:4566"
+
+// Seeding is done OUTSIDE this module, by `make lab-aws-seed`, which shells
+// out to the aws CLI.
+//
+// It is deliberately not done here. Importing a certificate is a WRITE, and
+// giving the Enumerator — or even this package's test binary — a write client
+// would put a write path inside the tree that policy_test.go asserts contains
+// none. The read-only guarantee is worth more than the convenience of
+// self-seeding tests, so the seeded ARN arrives through the environment.
+func seededARN(t *testing.T) string {
+	t.Helper()
+	arn := os.Getenv("CERTWATCH_SEEDED_ACM_ARN")
+	if arn == "" {
+		t.Skip("not seeded: run `make lab-aws-seed` and re-run with " +
+			"CERTWATCH_SEEDED_ACM_ARN set (it is printed by that target)")
+	}
+	return arn
+}
 
 func requireLocalStack(t *testing.T) {
 	t.Helper()
@@ -159,5 +184,32 @@ func TestLocalStackKnownEndpointsAreStable(t *testing.T) {
 			t.Fatalf("duplicate endpoint %q", ep)
 		}
 		seen[ep] = true
+	}
+}
+
+// The success path, not just the failure path: enumeration must actually
+// return a certificate that exists.
+func TestLocalStackFindsASeededCertificate(t *testing.T) {
+	arn := seededARN(t)
+	e := localEnumerator(t)
+	t.Logf("expecting to find %s", arn)
+
+	res, err := e.Enumerate(context.Background())
+	if err != nil {
+		t.Fatalf("Enumerate: %v", err)
+	}
+	if len(res.Certificates) == 0 {
+		t.Fatalf("enumeration found nothing after a certificate was imported; "+
+			"gaps=%d — an empty account makes every other assertion here vacuous",
+			len(res.Gaps))
+	}
+	var found bool
+	for _, f := range res.Certificates {
+		if f.ARN == arn {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("the seeded certificate %s is not among the %d findings", arn, len(res.Certificates))
 	}
 }

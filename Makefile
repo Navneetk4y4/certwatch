@@ -153,3 +153,22 @@ aws-lab-test: ## Run the AWS integration tests against LocalStack
 
 aws-lab-down: ## Stop LocalStack
 	@docker compose -f test/lab/docker-compose.aws.yml down -v
+
+.PHONY: lab-aws-up lab-aws-seed lab-aws-down
+lab-aws-up: ## Start LocalStack for the AWS suite
+	@docker compose -f test/lab/docker-compose.aws.yml up -d
+	@echo "waiting for localstack..."; \
+	 for i in $$(seq 1 40); do curl -sf http://localhost:4566/_localstack/health >/dev/null && break; sleep 3; done
+	@echo "localstack up"
+
+lab-aws-seed: ## Import a certificate into LocalStack ACM so enumeration has something to find
+	@# Deliberately the aws CLI and not Go: importing a certificate is a WRITE,
+	@# and pkg/discover/aws must contain no write path at all.
+	@AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 \
+	 aws --endpoint-url=http://localhost:4566 acm import-certificate \
+	   --certificate fileb://test/lab/certs/pool.crt \
+	   --private-key fileb://test/lab/certs/pool.key \
+	   --query CertificateArn --output text
+
+lab-aws-down: ## Stop LocalStack
+	@docker compose -f test/lab/docker-compose.aws.yml down -v
