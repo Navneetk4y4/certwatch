@@ -54,11 +54,32 @@ hostname-level monitor: 1 certificates, 0 disagreements (reports healthy)
 per-IP verification:    2 certificates, 1 disagreements (reports the problem)
 ```
 
+**Updated 2026-09-20.** Limitations 2 and 3 below are now CLOSED. Limitation 1 stands.
+
+```
+TestDetectsPerIPCertificateDivergence
+  DIVERGENCE DETECTED: 127.0.2.2 served 10005d30f1eea41b,
+                       127.0.2.3 served e49d3f8560ee5055
+TestHostnameLevelMonitorWouldMissIt
+  hostname-level monitor: 1 certificates, 0 disagreements (reports healthy)
+  per-IP verification:    2 certificates, 1 disagreements (reports the problem)
+TestEndToEndPartialRolloutProducesEvidenceAndReport ... PASS
+```
+
+Two **genuinely different IP addresses**, not two ports. Expected-state verification
+(`pkg/verify`) now exists: pinned and policy modes, human confirmation, grace windows, and
+a classifier with 14 regression tests covering every defect adversarial testing found.
+
 **Honest limitations of that test:**
 
 1. It dials the listeners directly, because the production SSRF policy refuses loopback. The refusal is correct and is tested separately (`pkg/scan/ssrf_test.go`). Everything downstream of the dial — handshake, chain capture, X.509 normalisation, aggregation — is the production path.
 2. Both fixture backends report the same address (they differ by port). The detection keys on *hostname + distinct fingerprints*, which is correct, but **address attribution across genuinely different IPs has not been exercised end to end.** Run `setup.sh` and point `certscan` at it to close that gap.
-3. **This is point-in-time detection, not continuous verification against a confirmed expected state.** That is build items 070–090 and does not exist. Do not claim it.
+3. ~~This is point-in-time detection, not continuous verification against a confirmed
+   expected state.~~ **Verification against a confirmed expected state now exists**
+   (`pkg/verify`, `certscan --verify`). What still does NOT exist is **continuous**
+   operation: scheduling, history, alert delivery, and the ability to tell a rolling
+   deploy from a pool that never converged — which needs two observations separated by
+   time. Claim verification. Do not claim monitoring.
 
 ```sh
 # The end-to-end version, after ./setup.sh
@@ -69,7 +90,15 @@ jq '.summary.ip_disagreements, .summary.unique_certificates' /tmp/lab.json
 
 ---
 
-## Test 2 — HostRepute   **NOT RUN**
+## Test 2 — HostRepute   **ATTEMPTED 2026-09-20 — COULD NOT BE RUN**
+
+`hostrepute.com` returns **HTTP 403** to every automated request (Cloudflare, Ray ID
+`a3dc83e238493ed9`). Account creation is also not something I can do. Findings from public
+material are in `../../../project_1/competitive_kill_test_2026_09_20.md` and are labelled
+`VENDOR CLAIM, SEARCH-INDEX MEDIATED` — **not** behavioural observation. Result: A = NO
+(monitors are added and metered per slot), C = YES (claimed). **NO-GO A not triggered.**
+
+### Original protocol, for whoever can run it
 
 `INFERRED` from public material: monitors are **defined**, not discovered — *"Active certificate monitor slots are subscription-backed. Plans limit active certificate monitor slots and schedule interval."*
 
@@ -99,7 +128,18 @@ jq '.summary.ip_disagreements, .summary.unique_certificates' /tmp/lab.json
 
 ---
 
-## Test 3 — CertPulse   **NOT RUN**
+## Test 3 — CertPulse   **PARTIALLY RUN 2026-09-20 — documentation only**
+
+Their docs were read directly. Endpoints are added by hand (*"click **Add Endpoint**. Enter
+the hostname and optional port"*); there is no CIDR scanning and no per-IP handling anywhere
+in their docs, pricing or blog. **The register's `VERIFIED` "network scanning" claim was
+taken from a CertPulse blog post recommending nmap and masscan — it is not their product.**
+Result: A = NO for credential-free discovery, C = NO. **NO-GO B not triggered.**
+
+Pricing, read directly: $79/mo for 250 external endpoints = **$3.79/endpoint/year**, against
+Project 1's proposed $72. That gap is now the most likely killer.
+
+### Original protocol, for whoever can run it
 
 `VERIFIED` it does hybrid discovery: *"Network scanning, Cloud API enumeration, Kubernetes secret scanning, CT log harvesting, Filesystem scanning."*
 `UNKNOWN` whether it does per-resolved-IP verification — its architecture article contains *"no discussion of load balancer split-brain scenarios or resolved IP handling."*
@@ -151,7 +191,8 @@ Both in one product              YES*        ___          ___
 Requires vendor cloud creds      NO          ___          ___
 Cost per endpoint / year         $72(proposed) ___        ___
 
-* point-in-time; continuous expected-state verification is NOT built
+* expected-state verification IS built and tested; CONTINUOUS monitoring (scheduling,
+  history, alert delivery) is NOT
 ```
 
 **If any competitor scores YES on the first three, Project 1 has no defensible reason to exist and should be killed.**

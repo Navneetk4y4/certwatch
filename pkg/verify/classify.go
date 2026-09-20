@@ -333,13 +333,14 @@ func Classify(e Expectation, probes []scan.Probe, now time.Time, cfg Config) Res
 				e.EffectiveFrom.UTC().Format(time.RFC3339))
 		default:
 			r.Outcome, r.SubReason = OutcomeUnknown, ReasonNoConfirmedExpectation
-			r.Summary = "no confirmed expected state; recording what is served, comparing nothing"
+			r.Summary = "There is no confirmed expected state, so nothing was compared against one"
 		}
 		if r.FingerprintDivergence {
 			r.Outcome, r.SubReason = OutcomeWarning, ReasonFingerprintDivergence
-			r.Summary = fmt.Sprintf("%d addresses serve %d different certificates. %s "+
-				"The addresses disagree with each other, which needs no expected state to see.",
-				c, distinctFingerprints(r.PerIP), r.Summary)
+			r.Summary = fmt.Sprintf(
+				"%d addresses serve %d different certificates, which needs no expected "+
+					"state to see. %s.",
+				c, distinctFingerprints(r.PerIP), strings.TrimRight(r.Summary, "."))
 		}
 
 	// 1. Nothing resolved.
