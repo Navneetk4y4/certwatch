@@ -1,0 +1,60 @@
+# Item 066. Three DNS behaviours the scanner must survive.
+
+# 1. ROUND ROBIN / multi-A. lab.internal.test resolves to all three pool
+#    members plus the divergent one. This is the record that makes per-IP
+#    verification meaningful: a hostname-level monitor resolves this, connects
+#    once, and sees whichever address answered first.
+lab.internal.test:53 {
+    hosts {
+        10.77.0.11 lab.internal.test
+        10.77.0.12 lab.internal.test
+        10.77.0.13 lab.internal.test
+        10.77.0.14 lab.internal.test
+        fallthrough
+    }
+    log
+}
+
+# 2. REBINDING. First answer is a lab address; the record has TTL 0 so a
+#    resolver that re-queries between the policy check and the dial gets a
+#    different, BLOCKED answer. pkg/scan must dial the address it already
+#    checked, not re-resolve.
+rebind.lab.internal.test:53 {
+    template IN A rebind.lab.internal.test {
+        match "^rebind\.lab\.internal\.test\.$"
+        answer "{{ .Name }} 0 IN A 169.254.169.254"
+    }
+    log
+}
+
+# 3. SPLIT HORIZON. A name that answers differently inside than out. The
+#    publicly_resolvable check must report UNKNOWN rather than guessing.
+split.lab.internal.test:53 {
+    hosts {
+        10.77.0.11 split.lab.internal.test
+        fallthrough
+    }
+    log
+}
+
+.:53 {
+    hosts {
+        10.77.0.11 web-a.lab.internal.test
+        10.77.0.12 web-b.lab.internal.test
+        10.77.0.13 web-c.lab.internal.test
+        10.77.0.14 divergent.lab.internal.test
+        10.77.0.20 expired.lab.internal.test
+        10.77.0.21 badchain.lab.internal.test
+        10.77.0.22 wronghost.lab.internal.test
+        10.77.0.23 nearexpiry.lab.internal.test
+        10.77.0.24 rogue.lab.internal.test
+        10.77.0.25 alpha.lab.internal.test beta.lab.internal.test gamma.lab.internal.test
+        10.77.0.26 mtls.lab.internal.test
+        10.77.0.27 rotate.lab.internal.test
+        10.77.0.30 draining.lab.internal.test
+        fallthrough
+    }
+    forward . 1.1.1.1
+    log
+    errors
+}

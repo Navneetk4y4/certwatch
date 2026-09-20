@@ -1,0 +1,144 @@
+# The certwatch test laboratory — build items 058-069.
+#
+# Every endpoint here is deliberately broken in one specific way, and each one
+# exists because a scenario in project_1_testing_strategy.md needs a system
+# that fails in exactly that way. Nothing in this file reaches the public
+# internet: the network is internal, addresses are static, and DNS is served by
+# the lab's own CoreDNS.
+#
+#   make lab-up      start it
+#   make lab-verify  assert every fixture is serving what it should
+#   make lab-down    destroy it, including volumes
+#
+# Static addressing is deliberate. The product's central claim is per-ADDRESS
+# verification, so a lab where addresses move is a lab that cannot test it.
+
+name: certwatch-lab
+
+x-nginx: &nginx
+  image: nginx:1.27-alpine
+  restart: unless-stopped
+  volumes:
+    - ./certs:/certs:ro
+  healthcheck:
+    test: ["CMD", "nc", "-z", "127.0.0.1", "8443"]
+    interval: 5s
+    timeout: 3s
+    retries: 10
+
+services:
+  # --- 059: the healthy pool. Three backends, ONE certificate. --------------
+  web-a:
+    <<: *nginx
+    volumes: ["./certs:/certs:ro", "./nginx/pool.conf:/etc/nginx/conf.d/default.conf:ro"]
+    networks: { lab: { ipv4_address: 10.77.0.11 } }
+  web-b:
+    <<: *nginx
+    volumes: ["./certs:/certs:ro", "./nginx/pool.conf:/etc/nginx/conf.d/default.conf:ro"]
+    networks: { lab: { ipv4_address: 10.77.0.12 } }
+  web-c:
+    <<: *nginx
+    volumes: ["./certs:/certs:ro", "./nginx/pool.conf:/etc/nginx/conf.d/default.conf:ro"]
+    networks: { lab: { ipv4_address: 10.77.0.13 } }
+
+  # --- 064 / GAP-3: the fourth pool member serves a DIFFERENT valid cert. ---
+  # This is the partial rollout. lab.internal.test resolves to .11-.14, three
+  # agree and one does not, and no hostname-level monitor can see it.
+  web-divergent:
+    <<: *nginx
+    volumes: ["./certs:/certs:ro", "./nginx/divergent.conf:/etc/nginx/conf.d/default.conf:ro"]
+    networks: { lab: { ipv4_address: 10.77.0.14 } }
+
+  # --- 060: expired, broken chain, wrong hostname --------------------------
+  web-expired:
+    <<: *nginx
+    volumes: ["./certs:/certs:ro", "./nginx/expired.conf:/etc/nginx/conf.d/default.conf:ro"]
+    networks: { lab: { ipv4_address: 10.77.0.20 } }
+  web-badchain:
+    <<: *nginx
+    volumes: ["./certs:/certs:ro", "./nginx/badchain.conf:/etc/nginx/conf.d/default.conf:ro"]
+    networks: { lab: { ipv4_address: 10.77.0.21 } }
+  web-wronghost:
+    <<: *nginx
+    volumes: ["./certs:/certs:ro", "./nginx/wronghost.conf:/etc/nginx/conf.d/default.conf:ro"]
+    networks: { lab: { ipv4_address: 10.77.0.22 } }
+  web-nearexpiry:
+    <<: *nginx
+    volumes: ["./certs:/certs:ro", "./nginx/nearexpiry.conf:/etc/nginx/conf.d/default.conf:ro"]
+    networks: { lab: { ipv4_address: 10.77.0.23 } }
+  web-rogue:
+    <<: *nginx
+    volumes: ["./certs:/certs:ro", "./nginx/rogue.conf:/etc/nginx/conf.d/default.conf:ro"]
+    networks: { lab: { ipv4_address: 10.77.0.24 } }
+
+  # --- 062: three hostnames on one address; mTLS ---------------------------
+  web-sni:
+    <<: *nginx
+    volumes: ["./certs:/certs:ro", "./nginx/sni.conf:/etc/nginx/conf.d/default.conf:ro"]
+    networks: { lab: { ipv4_address: 10.77.0.25 } }
+  web-mtls:
+    <<: *nginx
+    volumes: ["./certs:/certs:ro", "./nginx/mtls.conf:/etc/nginx/conf.d/default.conf:ro"]
+    networks: { lab: { ipv4_address: 10.77.0.26 } }
+
+  # --- 061: the file was replaced, the process was never reloaded ----------
+  web-noreload:
+    <<: *nginx
+    volumes: ["./certs:/certs:ro", "./nginx/noreload.conf:/etc/nginx/conf.d/default.conf:ro"]
+    networks: { lab: { ipv4_address: 10.77.0.27 } }
+
+  # --- 065 / GAP-2: web-draining. A pool member that refuses TCP. ----------
+  # No listener at all, which is what a draining backend actually looks like:
+  # ECONNREFUSED, not a timeout. The address must be reported unreachable and
+  # excluded from the matching denominator, NOT counted as a mismatch.
+  web-draining:
+    image: alpine:3.20
+    command: ["sleep", "infinity"]
+    restart: unless-stopped
+    networks: { lab: { ipv4_address: 10.77.0.30 } }
+
+  # --- 059: the load balancer in front of the pool -------------------------
+  lb:
+    image: haproxy:3.0-alpine
+    restart: unless-stopped
+    volumes:
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - ./certs:/certs:ro
+    depends_on: [web-a, web-b, web-c]
+    networks: { lab: { ipv4_address: 10.77.0.10 } }
+
+  # --- 066: round robin, split horizon, rebinding --------------------------
+  dns:
+    image: coredns/coredns:1.11.3
+    restart: unless-stopped
+    command: ["-conf", "/Corefile"]
+    volumes: ["./coredns/Corefile:/Corefile:ro"]
+    networks: { lab: { ipv4_address: 10.77.0.53 } }
+
+  # --- 067: the metadata decoy. The test asserts its log is EMPTY. ---------
+  imds-decoy:
+    build: { context: ../.., dockerfile: test/lab/services/Dockerfile }
+    command: ["-mode=imds", "-addr=:80", "-out=/data/imds.jsonl"]
+    restart: unless-stopped
+    volumes: ["lab-evidence:/data"]
+    networks: { lab: { ipv4_address: 10.77.0.169 } }
+
+  # --- 069: fake ingest, capturing bodies AND headers ----------------------
+  ingest:
+    build: { context: ../.., dockerfile: test/lab/services/Dockerfile }
+    command: ["-mode=ingest", "-addr=:8080", "-out=/data/ingest.jsonl"]
+    restart: unless-stopped
+    volumes: ["lab-evidence:/data"]
+    networks: { lab: { ipv4_address: 10.77.0.80 } }
+
+networks:
+  lab:
+    name: certwatch-lab
+    driver: bridge
+    internal: false
+    ipam:
+      config:
+        - subnet: 10.77.0.0/24
+
+volumes:
+  lab-evidence:
