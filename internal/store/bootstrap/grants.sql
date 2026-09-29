@@ -9,6 +9,11 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO certwatch_app;
 GRANT EXECUTE ON FUNCTION uuid_v7() TO certwatch_app;
 GRANT EXECUTE ON FUNCTION create_organization(text, citext) TO certwatch_app;
 
+-- session_index and oidc_flows are the two deliberately un-policied tables.
+-- Both answer PRE-tenancy questions: "which tenant does this cookie belong
+-- to" and "which login is this callback for". Neither can be scoped to a
+-- tenant, because the tenant is the thing being determined.
+
 -- Tables created by later migrations inherit the same grants.
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
     GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO certwatch_app;
