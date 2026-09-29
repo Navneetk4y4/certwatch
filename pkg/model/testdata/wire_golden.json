@@ -1,0 +1,88 @@
+{
+ "schema_version": 1,
+ "tool": "certscan",
+ "tool_version": "0.1.0-dev",
+ "started_at": "2026-09-20T12:00:00Z",
+ "finished_at": "2026-09-20T12:01:30Z",
+ "duration_seconds": 90,
+ "scope": {
+  "dry_run": false,
+  "offline": false,
+  "rate_limit_per_second": 0,
+  "concurrency": 0
+ },
+ "coverage": {
+  "targets_requested": 0,
+  "targets_attempted": 0,
+  "targets_skipped": 0,
+  "targets_unreachable": 0,
+  "targets_not_attempted": 0,
+  "deadline_hit": false,
+  "filesystem_walk_truncated": false
+ },
+ "summary": {
+  "unique_certificates": 0,
+  "total_observations": 0,
+  "endpoints_responding": 0,
+  "publicly_resolvable": 0,
+  "not_publicly_resolvable": 0,
+  "resolvability_unknown": 0,
+  "expiring_within_7_days": 0,
+  "expiring_within_30_days": 0,
+  "expiring_within_60_days": 0,
+  "already_expired": 0,
+  "not_yet_valid": 0,
+  "self_signed": 0,
+  "chain_incomplete": 0,
+  "by_issuer": null,
+  "by_key_algorithm": null,
+  "by_tls_version": null,
+  "by_parse_status": null,
+  "ip_disagreements": 0
+ },
+ "certificates": [
+  {
+   "certificate": {
+    "sha256": "a43fb78433ebc310a43fb78433ebc310a43fb78433ebc310a43fb78433ebc310",
+    "serial": "3e9",
+    "subject_dn": "CN=lab.internal.test,O=certwatch lab",
+    "subject_cn": "lab.internal.test",
+    "sans": [
+     "lab.internal.test",
+     "www.lab.internal.test"
+    ],
+    "issuer_dn": "CN=certwatch lab issuing CA G2,O=certwatch lab",
+    "not_before": "2026-08-20T12:00:00Z",
+    "not_after": "2026-11-20T12:00:00Z",
+    "key_algorithm": "ECDSA",
+    "key_size": 256,
+    "signature_algorithm": "",
+    "is_ca": false,
+    "is_self_signed": false,
+    "key_usage": null,
+    "ext_key_usage": null,
+    "parse_status": "ok",
+    "raw_der_length": 0
+   },
+   "seen_at": [
+    "10.77.0.11:8443"
+   ],
+   "sources": [
+    "network"
+   ],
+   "publicly_resolvable": true
+  }
+ ],
+ "endpoints": [
+  {
+   "hostname": "lab.internal.test",
+   "address": "10.77.0.11",
+   "port": 8443,
+   "sni_sent": "lab.internal.test",
+   "tls_version": "TLS1.3",
+   "leaf_sha256": "a43fb78433ebc310a43fb78433ebc310a43fb78433ebc310a43fb78433ebc310",
+   "chain_length": 2
+  }
+ ],
+ "skips": null
+}
