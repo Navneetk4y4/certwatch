@@ -378,3 +378,55 @@ func TestTableOwnerIsAlsoSubjectToThePolicy(t *testing.T) {
 			"bypasses every tenant policy.", n)
 	}
 }
+
+// The pre-tenancy exemption is bounded by this test. If somebody adds a third
+// un-policied table, this fails and they have to justify it in a diff rather
+// than add it quietly.
+func TestPreTenancyExemptionListStaysSmall(t *testing.T) {
+	want := []string{"session_index", "oidc_flows"}
+	if len(PreTenancyTables) != len(want) {
+		t.Fatalf("PreTenancyTables has %d entries, want exactly %d (%v).\n"+
+			"Every entry is a table with a tenant_id and NO row-level security. "+
+			"Adding one needs an argument, not a commit.",
+			len(PreTenancyTables), len(want), want)
+	}
+	for i := range want {
+		if PreTenancyTables[i] != want[i] {
+			t.Errorf("PreTenancyTables[%d] = %q, want %q", i, PreTenancyTables[i], want[i])
+		}
+	}
+}
+
+// And the exemption must not become a hole: an exempt table may hold ONLY the
+// mapping it exists for. If session_index ever grows a column carrying real
+// tenant data, it stops being a lookup index and becomes an un-policied copy
+// of customer records.
+func TestExemptTablesHoldOnlyTheirMapping(t *testing.T) {
+	_, mig := newTestDB(t)
+	allowed := map[string]map[string]bool{
+		"session_index": {"token_hash": true, "session_id": true, "tenant_id": true},
+		"oidc_flows": {"state": true, "nonce": true, "code_verifier": true,
+			"redirect_uri": true, "issuer": true, "created_at": true,
+			"expires_at": true, "consumed_at": true},
+	}
+	for tbl, cols := range allowed {
+		rows, err := mig.Query(context.Background(), `
+			SELECT a.attname FROM pg_attribute a
+			  JOIN pg_class c ON c.oid = a.attrelid
+			 WHERE c.relname = $1 AND a.attnum > 0 AND NOT a.attisdropped`, tbl)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for rows.Next() {
+			var col string
+			if err := rows.Scan(&col); err != nil {
+				t.Fatal(err)
+			}
+			if !cols[col] {
+				t.Errorf("%s.%s is not in the permitted column set. An un-policied "+
+					"table may hold only the mapping it exists for.", tbl, col)
+			}
+		}
+		rows.Close()
+	}
+}

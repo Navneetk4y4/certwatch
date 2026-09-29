@@ -146,6 +146,24 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) (applied []int, err error)
 	return applied, nil
 }
 
+// PreTenancyTables are the ONLY tables allowed to carry a tenant_id without
+// an RLS policy.
+//
+// Both answer a question that precedes tenancy, so they cannot be scoped to a
+// tenant: the tenant is the thing being determined.
+//
+//	session_index  which tenant does this session cookie belong to?
+//	oidc_flows     which login is this provider callback for?
+//
+// Both hold only the mapping. No certificate, no endpoint, no user row. Both
+// are keyed by a value with 256 bits of entropy, so neither can be enumerated.
+//
+// This list is asserted to its exact length by a test, the same way
+// internal/tools/importcheck bounds its exception list: growing it is a
+// reviewable diff where somebody has to argue for the new entry, not a quiet
+// addition.
+var PreTenancyTables = []string{"session_index", "oidc_flows"}
+
 // UnpoliciedTenantTables is TENANT-004, build item 097 — the sweep.
 //
 // It asks Postgres itself which tables carry a tenant_id but are not protected
@@ -168,13 +186,14 @@ SELECT c.relname
            AND a.attnum > 0 AND NOT a.attisdropped
            AND (a.attname = 'tenant_id' OR c.relname = 'organizations'))
    AND c.relname <> 'schema_migrations'
+   AND c.relname <> ALL($1::text[])
    AND (
         NOT c.relrowsecurity
      OR NOT c.relforcerowsecurity
      OR NOT EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid = c.oid)
    )
  ORDER BY c.relname`
-	rows, err := pool.Query(ctx, q)
+	rows, err := pool.Query(ctx, q, PreTenancyTables)
 	if err != nil {
 		return nil, err
 	}
