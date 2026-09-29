@@ -99,11 +99,34 @@ def probe():
     ev[85] = ("IN_PROGRESS", "lab exists; scenarios not scripted as a suite",
               "one scenario run by hand", "S13/S14 executed; S1-S12/S28/S29 not scripted")
 
-    # E7 086-090 and everything after: not started.
-    for i in range(86, 91):
+    ev[86] = ("VERIFIED", "pkg/model + testdata/wire_golden.json",
+              "3 tests: golden, round-trip, strict decode",
+              "renaming/retyping/removing a field fails with a diff")
+    for i in range(87, 91):
         ev[i] = ("NOT_STARTED", "", "", "")
     for i in range(91, 177):
         ev[i] = ("NOT_STARTED", "", "", "")
+
+    # E8 tenancy + RLS (091-095, 097), verified against real PostgreSQL.
+    e8 = "17 tests inc. 14-table sweep; mutations: FORCE caught, session-SET caught"
+    for i, what in [(91, "constrained roles; Open refuses BYPASSRLS/superuser"),
+                    (92, "migration 001, RLS scaffolding, tenant_rls()"),
+                    (93, "internal/tenancy; no handle without a tenant"),
+                    (94, "set_config(..., TRUE) transaction-local"),
+                    (95, "migrations 002/003, 14 tenant-owned tables"),
+                    (97, "cross-tenant suite + pg_class/pg_policy sweep")]:
+        ev[i] = ("VERIFIED", what, "internal/store tests green", e8)
+    ev[96] = ("NOT_STARTED", "", "", "sqlc not wired; queries are hand-written pgx")
+
+    # E9 auth. OIDC itself is NOT built.
+    a9 = "6 of 6 mutations caught (disabled user, replay, idle, rotation, role, fail-open)"
+    ev[99] = ("VERIFIED", "internal/auth sessions", "13 tests", a9)
+    ev[101] = ("VERIFIED", "RBAC middleware, scope-then-authorize", "4 tests", a9)
+    ev[102] = ("VERIFIED", "authorization matrix, asserted total", "TestAuthorizationMatrix...", a9)
+    ev[98] = ("NOT_STARTED", "schema only (migration 003)", "",
+              "OIDC discovery + Authorization Code/PKCE flow NOT built")
+    ev[100] = ("NOT_STARTED", "schema only (identity_providers)", "",
+               "domain-to-tenant JIT provisioning NOT built")
     # Items that are not engineering at all.
     for i, why in [(171, "SOC 2 Type II observation window — months, needs an auditor"),
                    (172, "design-partner pilot — needs a customer"),

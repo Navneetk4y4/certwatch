@@ -1,14 +1,14 @@
 {
  "total": 176,
  "counts": {
-  "VERIFIED": 82,
+  "VERIFIED": 92,
   "IMPLEMENTED": 3,
   "BLOCKED_EXTERNAL": 3,
   "IN_PROGRESS": 1,
-  "NOT_STARTED": 87
+  "NOT_STARTED": 77
  },
  "generated_from": "/Users/navneetkumar/Desktop/SAAS/project_1/project_1_full_development_plan.md",
- "head": "99b9503",
+ "head": "0a0b53c",
  "items": [
   {
    "item": 1,
@@ -18,8 +18,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 2,
@@ -29,8 +29,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 3,
@@ -40,8 +40,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 4,
@@ -51,8 +51,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 5,
@@ -62,8 +62,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 6,
@@ -73,8 +73,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 7,
@@ -84,8 +84,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 8,
@@ -95,8 +95,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 9,
@@ -106,8 +106,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 10,
@@ -117,8 +117,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 11,
@@ -128,8 +128,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 12,
@@ -139,8 +139,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 13,
@@ -150,8 +150,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 14,
@@ -161,8 +161,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 15,
@@ -172,8 +172,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 16,
@@ -183,8 +183,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 17,
@@ -194,8 +194,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 18,
@@ -205,8 +205,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 19,
@@ -216,8 +216,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 20,
@@ -227,8 +227,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 21,
@@ -238,8 +238,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 22,
@@ -249,8 +249,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 23,
@@ -260,8 +260,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 24,
@@ -271,8 +271,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 25,
@@ -282,8 +282,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 26,
@@ -293,8 +293,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 27,
@@ -304,8 +304,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 28,
@@ -315,8 +315,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 29,
@@ -326,8 +326,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 30,
@@ -337,8 +337,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 31,
@@ -348,8 +348,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 32,
@@ -359,8 +359,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 33,
@@ -370,8 +370,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 34,
@@ -381,8 +381,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 35,
@@ -392,8 +392,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 36,
@@ -403,8 +403,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 37,
@@ -414,8 +414,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 38,
@@ -425,8 +425,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 39,
@@ -436,8 +436,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 40,
@@ -447,8 +447,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 41,
@@ -458,8 +458,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 42,
@@ -469,8 +469,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 43,
@@ -480,8 +480,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 44,
@@ -491,8 +491,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 45,
@@ -502,8 +502,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 46,
@@ -513,8 +513,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 47,
@@ -524,8 +524,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 48,
@@ -535,8 +535,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 49,
@@ -546,8 +546,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 50,
@@ -557,8 +557,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 51,
@@ -568,8 +568,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 52,
@@ -579,8 +579,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 53,
@@ -590,8 +590,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 54,
@@ -601,8 +601,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 55,
@@ -612,8 +612,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 56,
@@ -623,8 +623,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 57,
@@ -635,7 +635,7 @@
    "implementation": "pkg/discover/aws + localstack_test.go",
    "tests": "4 original + 1 new success-path test",
    "evidence": "executed 2026-09-20 against localstack 3.8; seeded ACM -> findings=1",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 58,
@@ -646,7 +646,7 @@
    "implementation": "test/lab/docker-compose.yml + certgen",
    "tests": "make lab-verify",
    "evidence": "compose config valid; 15 containers run",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 59,
@@ -657,7 +657,7 @@
    "implementation": "haproxy/haproxy.cfg + web-a/b/c",
    "tests": "make lab-verify",
    "evidence": "three backends share one certificate a43fb78433ebc310",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 60,
@@ -668,7 +668,7 @@
    "implementation": "nginx/{expired,badchain,wronghost,nearexpiry}.conf",
    "tests": "make lab-verify",
    "evidence": "expired notAfter=2026-08-01, in the past",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 61,
@@ -679,7 +679,7 @@
    "implementation": "nginx/noreload.conf",
    "tests": "not asserted by lab-verify",
    "evidence": "container runs; the reload-drift assertion is not yet scripted",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 62,
@@ -690,7 +690,7 @@
    "implementation": "nginx/{sni,mtls}.conf",
    "tests": "not asserted by lab-verify",
    "evidence": "containers run; SNI and mTLS assertions not yet scripted",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 63,
@@ -701,7 +701,7 @@
    "implementation": "certs/rotate-old|new, nginx/rogue.conf",
    "tests": "not asserted by lab-verify",
    "evidence": "fixtures exist; rotation not yet scripted",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 64,
@@ -712,7 +712,7 @@
    "implementation": "web-divergent at 10.77.0.14",
    "tests": "make lab-verify + certscan run",
    "evidence": "PARTIAL ROLLOUT, 3 of 4 match, 10.77.0.14 serves 26dd29a8adde2cc1",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 65,
@@ -723,7 +723,7 @@
    "implementation": "web-draining, no listener",
    "tests": "make lab-verify",
    "evidence": "refuses TCP (ECONNREFUSED), asserted",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 66,
@@ -734,7 +734,7 @@
    "implementation": "coredns/Corefile",
    "tests": "dig inside the network",
    "evidence": "lab.internal.test -> 4 addresses; rebind -> 169.254.169.254",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 67,
@@ -745,7 +745,7 @@
    "implementation": "test/lab/services -mode=imds",
    "tests": "S13/S14 run",
    "evidence": "0 touches from certscan; 1 when touched by hand (vacuity proven)",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 68,
@@ -756,7 +756,7 @@
    "implementation": "docker-compose.aws.yml (LocalStack only)",
    "tests": "LocalStack suite passes",
    "evidence": "kind + cert-manager + tc netem NOT built",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 69,
@@ -767,7 +767,7 @@
    "implementation": "test/lab/services -mode=ingest",
    "tests": "manual probe",
    "evidence": "captured body 'BODY-CANARY' and header X-Secret-Probe",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 70,
@@ -778,7 +778,7 @@
    "implementation": "pkg/verify",
    "tests": "pkg/verify tests green",
    "evidence": "classify_test.go 20 tests + regression_test.go 14 tests",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 71,
@@ -789,7 +789,7 @@
    "implementation": "pkg/verify",
    "tests": "pkg/verify tests green",
    "evidence": "classify_test.go 20 tests + regression_test.go 14 tests",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 72,
@@ -800,7 +800,7 @@
    "implementation": "pkg/verify",
    "tests": "pkg/verify tests green",
    "evidence": "classify_test.go 20 tests + regression_test.go 14 tests",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 73,
@@ -811,7 +811,7 @@
    "implementation": "pkg/verify",
    "tests": "pkg/verify tests green",
    "evidence": "classify_test.go 20 tests + regression_test.go 14 tests",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 74,
@@ -822,7 +822,7 @@
    "implementation": "pkg/verify",
    "tests": "pkg/verify tests green",
    "evidence": "classify_test.go 20 tests + regression_test.go 14 tests",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 75,
@@ -833,7 +833,7 @@
    "implementation": "pkg/verify",
    "tests": "pkg/verify tests green",
    "evidence": "classify_test.go 20 tests + regression_test.go 14 tests",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 76,
@@ -844,7 +844,7 @@
    "implementation": "pkg/verify",
    "tests": "pkg/verify tests green",
    "evidence": "classify_test.go 20 tests + regression_test.go 14 tests",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 77,
@@ -855,7 +855,7 @@
    "implementation": "pkg/verify",
    "tests": "pkg/verify tests green",
    "evidence": "classify_test.go 20 tests + regression_test.go 14 tests",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 78,
@@ -866,7 +866,7 @@
    "implementation": "pkg/verify",
    "tests": "pkg/verify tests green",
    "evidence": "classify_test.go 20 tests + regression_test.go 14 tests",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 79,
@@ -877,7 +877,7 @@
    "implementation": "pkg/verify",
    "tests": "pkg/verify tests green",
    "evidence": "classify_test.go 20 tests + regression_test.go 14 tests",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 80,
@@ -888,7 +888,7 @@
    "implementation": "pkg/state \u2014 soft/hard + per-sub-reason N",
    "tests": "pkg/state 20 tests",
    "evidence": "mutation-tested: 3 of 4 mutations caught, 4th exposed a gap in the test which was then fixed",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 81,
@@ -899,7 +899,7 @@
    "implementation": "pkg/state \u2014 60s recheck, 10min window",
    "tests": "pkg/state 20 tests",
    "evidence": "mutation-tested: 3 of 4 mutations caught, 4th exposed a gap in the test which was then fixed",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 82,
@@ -910,7 +910,7 @@
    "implementation": "pkg/verify grace window",
    "tests": "regression_test.go",
    "evidence": "grace never suppresses expiry; disableable with a negative value",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 83,
@@ -921,7 +921,7 @@
    "implementation": "pkg/state \u2014 hard_transition/recovery/escalation",
    "tests": "pkg/state 20 tests",
    "evidence": "mutation-tested: 3 of 4 mutations caught, 4th exposed a gap in the test which was then fixed",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 84,
@@ -932,7 +932,7 @@
    "implementation": "pkg/state \u2014 severity table",
    "tests": "pkg/state 20 tests",
    "evidence": "mutation-tested: 3 of 4 mutations caught, 4th exposed a gap in the test which was then fixed",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 85,
@@ -943,18 +943,18 @@
    "implementation": "lab exists; scenarios not scripted as a suite",
    "tests": "one scenario run by hand",
    "evidence": "S13/S14 executed; S1-S12/S28/S29 not scripted",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 86,
    "id": "PROTO-001",
    "title": "pkg/model wire types \u2014 frozen here",
    "phase": "Phase E7 \u2014 Local end-to-end prototype",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "pkg/model + testdata/wire_golden.json",
+   "tests": "3 tests: golden, round-trip, strict decode",
+   "evidence": "renaming/retyping/removing a field fails with a diff",
+   "commit": "0a0b53c"
   },
   {
    "item": 87,
@@ -1005,55 +1005,55 @@
    "id": "TENANT-001",
    "title": "App DB role WITHOUT BYPASSRLS; grant matrix",
    "phase": "Phase E8 \u2014 Control plane foundation",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "constrained roles; Open refuses BYPASSRLS/superuser",
+   "tests": "internal/store tests green",
+   "evidence": "17 tests inc. 14-table sweep; mutations: FORCE caught, session-SET caught",
+   "commit": "0a0b53c"
   },
   {
    "item": 92,
    "id": "SCHEMA-001",
    "title": "Migration 001 including RLS scaffolding",
    "phase": "Phase E8 \u2014 Control plane foundation",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "migration 001, RLS scaffolding, tenant_rls()",
+   "tests": "internal/store tests green",
+   "evidence": "17 tests inc. 14-table sweep; mutations: FORCE caught, session-SET caught",
+   "commit": "0a0b53c"
   },
   {
    "item": 93,
    "id": "TENANT-002",
    "title": "internal/tenancy: context carrier; no handle without a tenant",
    "phase": "Phase E8 \u2014 Control plane foundation",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "internal/tenancy; no handle without a tenant",
+   "tests": "internal/store tests green",
+   "evidence": "17 tests inc. 14-table sweep; mutations: FORCE caught, session-SET caught",
+   "commit": "0a0b53c"
   },
   {
    "item": 94,
    "id": "TENANT-003",
    "title": "store.Begin with SET LOCAL inside the transaction",
    "phase": "Phase E8 \u2014 Control plane foundation",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "set_config(..., TRUE) transaction-local",
+   "tests": "internal/store tests green",
+   "evidence": "17 tests inc. 14-table sweep; mutations: FORCE caught, session-SET caught",
+   "commit": "0a0b53c"
   },
   {
    "item": 95,
    "id": "SCHEMA-002..010",
    "title": "Migrations 002\u2013010 (incl. sni NOT NULL, ips_unreachable, partitioning)",
    "phase": "Phase E8 \u2014 Control plane foundation",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "migrations 002/003, 14 tenant-owned tables",
+   "tests": "internal/store tests green",
+   "evidence": "17 tests inc. 14-table sweep; mutations: FORCE caught, session-SET caught",
+   "commit": "0a0b53c"
   },
   {
    "item": 96,
@@ -1063,7 +1063,7 @@
    "status": "NOT_STARTED",
    "implementation": "",
    "tests": "",
-   "evidence": "",
+   "evidence": "sqlc not wired; queries are hand-written pgx",
    "commit": ""
   },
   {
@@ -1071,11 +1071,11 @@
    "id": "TENANT-004",
    "title": "Cross-tenant isolation suite + pg_class/pg_policy sweep",
    "phase": "Phase E8 \u2014 Control plane foundation",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "cross-tenant suite + pg_class/pg_policy sweep",
+   "tests": "internal/store tests green",
+   "evidence": "17 tests inc. 14-table sweep; mutations: FORCE caught, session-SET caught",
+   "commit": "0a0b53c"
   },
   {
    "item": 98,
@@ -1083,9 +1083,9 @@
    "title": "OIDC discovery; Authorization Code + PKCE; three providers",
    "phase": "Phase E8 \u2014 Control plane foundation",
    "status": "NOT_STARTED",
-   "implementation": "",
+   "implementation": "schema only (migration 003)",
    "tests": "",
-   "evidence": "",
+   "evidence": "OIDC discovery + Authorization Code/PKCE flow NOT built",
    "commit": ""
   },
   {
@@ -1093,11 +1093,11 @@
    "id": "AUTH-002",
    "title": "Session store; cookie flags; absolute and idle expiry; rotation",
    "phase": "Phase E8 \u2014 Control plane foundation",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "internal/auth sessions",
+   "tests": "13 tests",
+   "evidence": "6 of 6 mutations caught (disabled user, replay, idle, rotation, role, fail-open)",
+   "commit": "0a0b53c"
   },
   {
    "item": 100,
@@ -1105,9 +1105,9 @@
    "title": "Domain-to-tenant binding; JIT viewer provisioning",
    "phase": "Phase E8 \u2014 Control plane foundation",
    "status": "NOT_STARTED",
-   "implementation": "",
+   "implementation": "schema only (identity_providers)",
    "tests": "",
-   "evidence": "",
+   "evidence": "domain-to-tenant JIT provisioning NOT built",
    "commit": ""
   },
   {
@@ -1115,22 +1115,22 @@
    "id": "AUTH-004",
    "title": "RBAC middleware; role check after tenant scoping",
    "phase": "Phase E8 \u2014 Control plane foundation",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "RBAC middleware, scope-then-authorize",
+   "tests": "4 tests",
+   "evidence": "6 of 6 mutations caught (disabled user, replay, idle, rotation, role, fail-open)",
+   "commit": "0a0b53c"
   },
   {
    "item": 102,
    "id": "AUTH-005",
    "title": "Endpoint \u00d7 role \u00d7 tenant authorization matrix",
    "phase": "Phase E8 \u2014 Control plane foundation",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "authorization matrix, asserted total",
+   "tests": "TestAuthorizationMatrix...",
+   "evidence": "6 of 6 mutations caught (disabled user, replay, idle, rotation, role, fail-open)",
+   "commit": "0a0b53c"
   },
   {
    "item": 103,
@@ -1878,7 +1878,7 @@
    "implementation": "",
    "tests": "",
    "evidence": "SOC 2 Type II observation window \u2014 months, needs an auditor",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 174,
@@ -1900,7 +1900,7 @@
    "implementation": "",
    "tests": "",
    "evidence": "first paying customer, signed contract >= $9,000",
-   "commit": "99b9503"
+   "commit": "0a0b53c"
   },
   {
    "item": 176,
@@ -1921,8 +1921,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 26,
@@ -1932,8 +1932,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 12 packages ok",
-   "commit": "99b9503"
+   "evidence": "make check: pass; 15 packages ok",
+   "commit": "0a0b53c"
   },
   {
    "item": 108,
