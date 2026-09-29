@@ -172,3 +172,30 @@ lab-aws-seed: ## Import a certificate into LocalStack ACM so enumeration has som
 
 lab-aws-down: ## Stop LocalStack
 	@docker compose -f test/lab/docker-compose.aws.yml down -v
+
+# ---- control-plane database ------------------------------------------------
+PGADMIN ?= postgres
+
+.PHONY: db-up db-migrate db-down db-psql
+db-up: ## Create the dev database and the two constrained roles
+	@psql -qX -d $(PGADMIN) -c "DROP DATABASE IF EXISTS certwatch" >/dev/null 2>&1 || true
+	@psql -qX -d $(PGADMIN) -c "DROP ROLE IF EXISTS certwatch_app" >/dev/null 2>&1 || true
+	@psql -qX -d $(PGADMIN) -c "DROP ROLE IF EXISTS certwatch_migrator" >/dev/null 2>&1 || true
+	@psql -qX -d $(PGADMIN) -c "CREATE DATABASE certwatch"
+	@psql -qX -d $(PGADMIN) -f internal/store/bootstrap/roles.sql
+	@psql -qX -d certwatch -c "ALTER DATABASE certwatch OWNER TO certwatch_migrator"
+	@psql -qX -d certwatch -c "ALTER SCHEMA public OWNER TO certwatch_migrator"
+	@echo "database ready. Roles:"
+	@psql -qX -d certwatch -tAc "SELECT '  '||rolname||' bypassrls='||rolbypassrls||' superuser='||rolsuper FROM pg_roles WHERE rolname LIKE 'certwatch%'"
+
+db-migrate: ## Apply migrations as the migrator role, then grant to the app role
+	@$(GO) run ./cmd/certwatch-ctl migrate
+	@psql -qX -d certwatch -U certwatch_migrator -h localhost -f internal/store/bootstrap/grants.sql
+
+db-down: ## Drop the dev database and roles
+	@psql -qX -d $(PGADMIN) -c "DROP DATABASE IF EXISTS certwatch" >/dev/null 2>&1 || true
+	@psql -qX -d $(PGADMIN) -c "DROP ROLE IF EXISTS certwatch_app" >/dev/null 2>&1 || true
+	@psql -qX -d $(PGADMIN) -c "DROP ROLE IF EXISTS certwatch_migrator" >/dev/null 2>&1 || true
+
+db-psql: ## psql as the APP role, so you see what the application sees
+	@psql "postgres://certwatch_app:certwatch_dev_password_not_for_production@localhost:5432/certwatch"
