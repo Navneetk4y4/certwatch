@@ -107,11 +107,25 @@ func TestNoTenantOwnedTableLeaksAcrossTenants(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The documented pre-tenancy tables are excluded here — they are
+	// un-policied on purpose and would always "leak" by this test's
+	// definition. They are not unguarded: PreTenancyTables is asserted to its
+	// exact contents, and TestExemptTablesHoldOnlyTheirMapping asserts each
+	// one holds only its mapping and no customer data. Using that SAME list
+	// rather than an ad-hoc skip is what keeps the two checks honest about
+	// each other.
+	exempt := map[string]bool{}
+	for _, e := range PreTenancyTables {
+		exempt[e] = true
+	}
 	var tables []string
 	for rows.Next() {
 		var n string
 		if err := rows.Scan(&n); err != nil {
 			t.Fatal(err)
+		}
+		if exempt[n] {
+			continue
 		}
 		tables = append(tables, n)
 	}
@@ -383,7 +397,7 @@ func TestTableOwnerIsAlsoSubjectToThePolicy(t *testing.T) {
 // un-policied table, this fails and they have to justify it in a diff rather
 // than add it quietly.
 func TestPreTenancyExemptionListStaysSmall(t *testing.T) {
-	want := []string{"session_index", "oidc_flows", "provider_domain_index"}
+	want := []string{"session_index", "oidc_flows", "provider_domain_index", "tenant_registry"}
 	if len(PreTenancyTables) != len(want) {
 		t.Fatalf("PreTenancyTables has %d entries, want exactly %d (%v).\n"+
 			"Every entry is a table with a tenant_id and NO row-level security. "+
@@ -411,6 +425,9 @@ func TestExemptTablesHoldOnlyTheirMapping(t *testing.T) {
 		// Routing only. If a secret column ever appears here, this fails.
 		"provider_domain_index": {"email_domain": true, "tenant_id": true,
 			"issuer": true, "client_id": true, "enabled": true},
+		// One opaque id and a flag. If a name, plan or domain ever appears
+		// here, an un-policied table has started describing customers.
+		"tenant_registry": {"tenant_id": true, "active": true},
 	}
 	for tbl, cols := range allowed {
 		rows, err := mig.Query(context.Background(), `

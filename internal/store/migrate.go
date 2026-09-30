@@ -155,6 +155,8 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) (applied []int, err error)
 //	session_index           which tenant does this session cookie belong to?
 //	oidc_flows              which login is this provider callback for?
 //	provider_domain_index   which tenant does this email domain belong to?
+//	tenant_registry         which tenants exist, for a worker that serves all
+//	                        of them? One opaque id per row and nothing else.
 //
 // Each holds only the mapping. No certificate, no endpoint, no user row, and
 // no secret — provider_domain_index carries client_id, which OAuth puts in the
@@ -170,7 +172,9 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) (applied []int, err error)
 // internal/tools/importcheck bounds its exception list: growing it is a
 // reviewable diff where somebody has to argue for the new entry, not a quiet
 // addition.
-var PreTenancyTables = []string{"session_index", "oidc_flows", "provider_domain_index"}
+var PreTenancyTables = []string{
+	"session_index", "oidc_flows", "provider_domain_index", "tenant_registry",
+}
 
 // UnpoliciedTenantTables is TENANT-004, build item 097 — the sweep.
 //

@@ -21,4 +21,5 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
 -- Explicitly withheld, so the absence is a decision and not an oversight.
 REVOKE TRUNCATE ON ALL TABLES IN SCHEMA public FROM certwatch_app;
 GRANT EXECUTE ON FUNCTION sync_provider_domain_index() TO certwatch_app;
+GRANT EXECUTE ON FUNCTION sync_tenant_registry() TO certwatch_app;
 REVOKE CREATE ON SCHEMA public FROM certwatch_app;

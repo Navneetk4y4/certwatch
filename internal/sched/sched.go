@@ -1,0 +1,409 @@
+// Package sched is the persistent job queue.
+//
+// Build items 103-114 region (E11).
+//
+// # Why this is in PostgreSQL and not in memory
+//
+// A scheduler that keeps pending work in a process's memory loses all of it
+// when that process restarts. "We did not check your certificates for six
+// hours because a pod rescheduled" is not a monitoring product. So state lives
+// in the database and workers are disposable: kill one mid-job and another
+// picks the work up when the lease expires.
+//
+// # Three guarantees, each enforced by the database rather than by Go
+//
+//	no duplicates     a partial UNIQUE INDEX on (tenant, dedupe_key) WHERE
+//	                  state IN (pending, running). Two schedulers racing to
+//	                  enqueue the same work cannot both win.
+//	no double-claim   FOR UPDATE SKIP LOCKED. Two workers claiming at the same
+//	                  instant get DIFFERENT rows; neither blocks.
+//	no lost work      a lease with an expiry. A worker that dies without
+//	                  saying so leaves a running job whose lease lapses, and
+//	                  Recover returns it to pending.
+//
+// Each of those is a property of a constraint or a lock, so it holds under
+// concurrency that a Go-level check would lose.
+package sched
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/certwatch/certwatch/internal/store"
+	"github.com/certwatch/certwatch/internal/tenancy"
+	"github.com/certwatch/certwatch/pkg/safelog"
+)
+
+// Kind is what a job does.
+type Kind string
+
+const (
+	KindVerify   Kind = "verify_endpoint"
+	KindDiscover Kind = "discover"
+	KindReap     Kind = "reap"
+)
+
+// State mirrors the job_state enum.
+type State string
+
+const (
+	StatePending   State = "pending"
+	StateRunning   State = "running"
+	StateDone      State = "done"
+	StateFailed    State = "failed"
+	StateCancelled State = "cancelled"
+)
+
+// ErrAlreadyQueued is returned when identical work is already outstanding.
+// It is NOT an error condition — it is the duplicate guard working.
+var ErrAlreadyQueued = errors.New("sched: identical work is already queued")
+
+// Job is one unit of work.
+type Job struct {
+	ID          string
+	TenantID    tenancy.Tenant
+	Kind        Kind
+	EndpointID  string
+	State       State
+	Attempts    int
+	MaxAttempts int
+	RunAfter    time.Time
+	DedupeKey   string
+	LastError   string
+}
+
+// Config tunes the queue.
+type Config struct {
+	// LeaseDuration is how long a claimed job is considered alive. Too short
+	// and a slow job gets picked up twice; too long and a crashed worker's
+	// work stalls for that long. It must exceed the slowest expected job.
+	LeaseDuration time.Duration
+	// BaseBackoff is the first retry delay; it doubles per attempt.
+	BaseBackoff time.Duration
+	// MaxBackoff caps exponential growth.
+	MaxBackoff time.Duration
+	// WorkerID identifies this process in leases and history.
+	WorkerID string
+}
+
+// DefaultConfig is deliberately conservative on the lease.
+func DefaultConfig(workerID string) Config {
+	return Config{
+		LeaseDuration: 5 * time.Minute,
+		BaseBackoff:   30 * time.Second,
+		MaxBackoff:    30 * time.Minute,
+		WorkerID:      workerID,
+	}
+}
+
+// Queue is the persistent scheduler.
+type Queue struct {
+	st  *store.Store
+	log *safelog.Logger
+	cfg Config
+	now func() time.Time
+}
+
+// New builds a Queue. now is injectable so leases and backoff can be tested
+// against hours of simulated time without sleeping.
+func New(st *store.Store, log *safelog.Logger, cfg Config, now func() time.Time) *Queue {
+	if now == nil {
+		now = time.Now
+	}
+	if cfg.LeaseDuration <= 0 {
+		cfg.LeaseDuration = DefaultConfig(cfg.WorkerID).LeaseDuration
+	}
+	if cfg.BaseBackoff <= 0 {
+		cfg.BaseBackoff = DefaultConfig(cfg.WorkerID).BaseBackoff
+	}
+	if cfg.MaxBackoff <= 0 {
+		cfg.MaxBackoff = DefaultConfig(cfg.WorkerID).MaxBackoff
+	}
+	return &Queue{st: st, log: log, cfg: cfg, now: now}
+}
+
+// Enqueue adds work. Identical outstanding work returns ErrAlreadyQueued
+// rather than creating a second row.
+func (q *Queue) Enqueue(ctx context.Context, kind Kind, endpointID, dedupeKey string,
+	runAfter time.Time) (string, error) {
+	tid, err := tenancy.FromContext(ctx)
+	if err != nil {
+		return "", err
+	}
+	if dedupeKey == "" {
+		return "", errors.New("sched: a dedupe key is required; without one the queue " +
+			"cannot prevent duplicates")
+	}
+	var id string
+	err = q.st.InTenantTx(ctx, func(ctx context.Context, tx *store.Tx) error {
+		// ON CONFLICT DO NOTHING against the partial unique index: the
+		// database decides, so two schedulers racing cannot both insert.
+		row := tx.Conn().QueryRow(ctx, `
+			INSERT INTO jobs (tenant_id, kind, endpoint_id, dedupe_key, run_after)
+			VALUES ($1::uuid, $2, NULLIF($3::text,'')::uuid, $4, $5)
+			ON CONFLICT DO NOTHING
+			RETURNING id::text`,
+			tid.String(), string(kind), endpointID, dedupeKey, runAfter.UTC())
+		return row.Scan(&id)
+	})
+	if err != nil {
+		// Distinguish "the duplicate guard fired" from "the database is
+		// broken". An earlier version returned ErrAlreadyQueued for BOTH,
+		// which meant a connection or constraint failure looked like
+		// successful deduplication and the work was silently dropped.
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", ErrAlreadyQueued
+		}
+		var pge *pgconn.PgError
+		if errors.As(err, &pge) && pge.Code == "23505" { // unique_violation
+			return "", ErrAlreadyQueued
+		}
+		return "", fmt.Errorf("sched: enqueue: %w", err)
+	}
+	return id, nil
+}
+
+// ActiveTenants lists the tenants a worker should serve.
+//
+// This is the one system-level question a background worker genuinely has to
+// ask before it can scope anything: "who exists?". tenant_registry holds one
+// opaque id per row and nothing else, so answering it reveals a count and no
+// identities.
+func (q *Queue) ActiveTenants(ctx context.Context) ([]tenancy.Tenant, error) {
+	var out []tenancy.Tenant
+	err := q.st.Privileged(ctx, "enumerate tenants for a worker that serves all of them",
+		func(ctx context.Context, pool *pgxpool.Pool) error {
+			rows, err := pool.Query(ctx,
+				`SELECT tenant_id::text FROM tenant_registry WHERE active ORDER BY tenant_id`)
+			if err != nil {
+				return err
+			}
+			defer rows.Close()
+			for rows.Next() {
+				var id string
+				if err := rows.Scan(&id); err != nil {
+					return err
+				}
+				out = append(out, tenancy.Tenant(id))
+			}
+			return rows.Err()
+		})
+	return out, err
+}
+
+// Claim takes up to n due jobs, across every tenant.
+//
+// It loops tenants and claims INSIDE each one's RLS scope rather than issuing
+// one unscoped query. The unscoped version was tried and is wrong twice over:
+// `jobs` is policied, so it simply errors, and un-policying `jobs` to make it
+// work would put endpoint ids and error text behind no policy at all to save
+// a loop.
+//
+// SKIP LOCKED still does the real work per tenant, so two workers claiming at
+// the same instant still get different rows.
+func (q *Queue) Claim(ctx context.Context, n int) ([]Job, error) {
+	if n <= 0 {
+		n = 1
+	}
+	tenants, err := q.ActiveTenants(ctx)
+	if err != nil {
+		return nil, err
+	}
+	now := q.now().UTC()
+	var out []Job
+	for _, tn := range tenants {
+		if len(out) >= n {
+			break
+		}
+		want := n - len(out)
+		tctx := tenancy.WithTenant(ctx, tn)
+		err := q.st.InTenantTx(tctx, func(ctx context.Context, tx *store.Tx) error {
+			rows, err := tx.Conn().Query(ctx, `
+				WITH claimed AS (
+				  SELECT id FROM jobs
+				   WHERE state = 'pending' AND run_after <= $1
+				   ORDER BY run_after
+				   FOR UPDATE SKIP LOCKED
+				   LIMIT $2
+				)
+				UPDATE jobs j
+				   SET state = 'running', attempts = j.attempts + 1,
+				       leased_until = $3, leased_by = $4, started_at = $1
+				  FROM claimed c
+				 WHERE j.id = c.id
+			 RETURNING j.id::text, j.kind, COALESCE(j.endpoint_id::text,''),
+			           j.attempts, j.max_attempts, j.dedupe_key`,
+				now, want, now.Add(q.cfg.LeaseDuration), q.cfg.WorkerID)
+			if err != nil {
+				return err
+			}
+			defer rows.Close()
+			for rows.Next() {
+				var j Job
+				var kind string
+				if err := rows.Scan(&j.ID, &kind, &j.EndpointID,
+					&j.Attempts, &j.MaxAttempts, &j.DedupeKey); err != nil {
+					return err
+				}
+				j.TenantID = tn
+				j.Kind = Kind(kind)
+				j.State = StateRunning
+				out = append(out, j)
+			}
+			return rows.Err()
+		})
+		if err != nil {
+			return out, err
+		}
+	}
+	return out, nil
+}
+
+// Complete marks a job done and records the attempt.
+func (q *Queue) Complete(ctx context.Context, j Job, detail string) error {
+	ctx = tenancy.WithTenant(ctx, j.TenantID)
+	return q.st.InTenantTx(ctx, func(ctx context.Context, tx *store.Tx) error {
+		if _, err := tx.Conn().Exec(ctx, `
+			UPDATE jobs SET state='done', finished_at=$2, leased_until=NULL, leased_by=NULL
+			 WHERE id=$1::uuid`, j.ID, q.now().UTC()); err != nil {
+			return err
+		}
+		return q.recordRun(ctx, tx, j, "ok", detail)
+	})
+}
+
+// Fail records a failed attempt and either schedules a retry with exponential
+// backoff or gives up.
+func (q *Queue) Fail(ctx context.Context, j Job, cause string) error {
+	ctx = tenancy.WithTenant(ctx, j.TenantID)
+	exhausted := j.Attempts >= j.MaxAttempts
+	backoff := q.backoffFor(j.Attempts)
+	return q.st.InTenantTx(ctx, func(ctx context.Context, tx *store.Tx) error {
+		if exhausted {
+			// Terminal. The row stays as evidence rather than disappearing:
+			// "why did this endpoint stop being checked" must be answerable.
+			if _, err := tx.Conn().Exec(ctx, `
+				UPDATE jobs SET state='failed', finished_at=$2, last_error=$3,
+				                leased_until=NULL, leased_by=NULL
+				 WHERE id=$1::uuid`, j.ID, q.now().UTC(), truncate(cause, 2000)); err != nil {
+				return err
+			}
+			return q.recordRun(ctx, tx, j, "error", cause)
+		}
+		if _, err := tx.Conn().Exec(ctx, `
+			UPDATE jobs SET state='pending', run_after=$2, last_error=$3,
+			                leased_until=NULL, leased_by=NULL
+			 WHERE id=$1::uuid`,
+			j.ID, q.now().UTC().Add(backoff), truncate(cause, 2000)); err != nil {
+			return err
+		}
+		return q.recordRun(ctx, tx, j, "error", cause)
+	})
+}
+
+// backoffFor doubles per attempt, capped. Attempt 1 gets BaseBackoff.
+func (q *Queue) backoffFor(attempt int) time.Duration {
+	d := q.cfg.BaseBackoff
+	for i := 1; i < attempt && d < q.cfg.MaxBackoff; i++ {
+		d *= 2
+	}
+	if d > q.cfg.MaxBackoff {
+		d = q.cfg.MaxBackoff
+	}
+	return d
+}
+
+func (q *Queue) recordRun(ctx context.Context, tx *store.Tx, j Job, outcome, detail string) error {
+	_, err := tx.Conn().Exec(ctx, `
+		INSERT INTO job_runs (tenant_id, job_id, attempt, worker, outcome, detail, started_at)
+		VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7)`,
+		j.TenantID.String(), j.ID, j.Attempts, q.cfg.WorkerID, outcome,
+		truncate(detail, 4000), q.now().UTC())
+	return err
+}
+
+// Recover returns jobs whose lease has expired to the pending pool.
+//
+// This is what makes a kill -9 survivable. A worker that dies mid-job leaves
+// its row in `running` with a lease that stops being renewed; once it lapses,
+// the work is claimable again. Without this, every crashed worker permanently
+// strands whatever it held.
+//
+// Per-tenant for the same reason Claim is.
+func (q *Queue) Recover(ctx context.Context) (int, error) {
+	tenants, err := q.ActiveTenants(ctx)
+	if err != nil {
+		return 0, err
+	}
+	total := 0
+	for _, tn := range tenants {
+		tctx := tenancy.WithTenant(ctx, tn)
+		err := q.st.InTenantTx(tctx, func(ctx context.Context, tx *store.Tx) error {
+			tag, err := tx.Conn().Exec(ctx, `
+				UPDATE jobs
+				   SET state='pending', leased_until=NULL, leased_by=NULL,
+				       last_error = COALESCE(last_error,'') || ' [lease expired: worker lost]'
+				 WHERE state='running' AND leased_until IS NOT NULL AND leased_until < $1`,
+				q.now().UTC())
+			if err != nil {
+				return err
+			}
+			total += int(tag.RowsAffected())
+			return nil
+		})
+		if err != nil {
+			return total, err
+		}
+	}
+	return total, nil
+}
+
+// Cancel stops a pending job.
+func (q *Queue) Cancel(ctx context.Context, jobID string) error {
+	return q.st.InTenantTx(ctx, func(ctx context.Context, tx *store.Tx) error {
+		_, err := tx.Conn().Exec(ctx, `
+			UPDATE jobs SET state='cancelled', finished_at=$2
+			 WHERE id=$1::uuid AND state='pending'`, jobID, q.now().UTC())
+		return err
+	})
+}
+
+// Stats is a tenant's queue depth, for the UI and for alerting on the
+// scheduler itself.
+type Stats struct{ Pending, Running, Done, Failed, Cancelled int }
+
+// StatsFor reports queue depth for the tenant in ctx.
+func (q *Queue) StatsFor(ctx context.Context) (Stats, error) {
+	var s Stats
+	err := q.st.InTenantTx(ctx, func(ctx context.Context, tx *store.Tx) error {
+		return tx.Conn().QueryRow(ctx, `
+			SELECT count(*) FILTER (WHERE state='pending'),
+			       count(*) FILTER (WHERE state='running'),
+			       count(*) FILTER (WHERE state='done'),
+			       count(*) FILTER (WHERE state='failed'),
+			       count(*) FILTER (WHERE state='cancelled')
+			  FROM jobs`).Scan(&s.Pending, &s.Running, &s.Done, &s.Failed, &s.Cancelled)
+	})
+	return s, err
+}
+
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n] + "…"
+}
+
+// DedupeKeyFor builds the key that collapses repeated work.
+//
+// The window is part of the key: the same endpoint may legitimately be
+// verified again in the NEXT window, but not twice in this one.
+func DedupeKeyFor(kind Kind, endpointID string, window time.Time) string {
+	return fmt.Sprintf("%s:%s:%d", kind, endpointID, window.UTC().Unix())
+}

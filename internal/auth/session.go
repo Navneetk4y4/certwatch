@@ -125,7 +125,7 @@ func (m *Manager) Create(ctx context.Context, userID, email string,
 		if err := tx.Conn().QueryRow(ctx, `
 			INSERT INTO sessions
 			    (tenant_id, user_id, token_hash, expires_at, idle_expires_at, user_agent, source_ip)
-			VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, NULLIF($7,'')::inet)
+			VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, NULLIF($7::text,'')::inet)
 			RETURNING id::text`,
 			tid.String(), userID, th,
 			s.ExpiresAt, s.IdleExpiresAt, userAgent, sourceIP).Scan(&s.ID); err != nil {
