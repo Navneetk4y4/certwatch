@@ -1,17 +1,17 @@
 # Completion ledger
 
-Generated from `project_1_full_development_plan.md` and the repository at `0a0b53c`.
+Generated from `project_1_full_development_plan.md` and the repository at `cdd6c56`.
 Every status is an evidence probe against the working tree, not a claim from a document.
 
 ## Totals
 
 | Status | Items |
 |---|---|
-| VERIFIED | 92 |
+| VERIFIED | 112 |
 | IMPLEMENTED | 3 |
-| IN_PROGRESS | 1 |
+| IN_PROGRESS | 2 |
 | BLOCKED_EXTERNAL | 3 |
-| NOT_STARTED | 77 |
+| NOT_STARTED | 56 |
 | **Total** | **176** |
 
 `COMPLETE` is deliberately absent: it requires implementation, tests and
@@ -23,28 +23,28 @@ verification evidence together, and is not claimed for any item here.
 
 | # | ID | Status | Evidence |
 |---|---|---|---|
-| 001 | `REPO-001` | VERIFIED | make check: pass; 15 packages ok |
-| 002 | `REPO-002` | VERIFIED | make check: pass; 15 packages ok |
-| 003 | `REPO-003` | VERIFIED | make check: pass; 15 packages ok |
-| 004 | `CI-001` | VERIFIED | make check: pass; 15 packages ok |
-| 005 | `CI-002` | VERIFIED | make check: pass; 15 packages ok |
-| 006 | `CI-003` | VERIFIED | make check: pass; 15 packages ok |
-| 007 | `CI-004` | VERIFIED | make check: pass; 15 packages ok |
-| 008 | `CI-005` | VERIFIED | make check: pass; 15 packages ok |
-| 009 | `CI-006` | VERIFIED | make check: pass; 15 packages ok |
-| 010 | `CI-007` | VERIFIED | make check: pass; 15 packages ok |
-| 011 | `CI-008` | VERIFIED | make check: pass; 15 packages ok |
-| 012 | `CI-009` | VERIFIED | make check: pass; 15 packages ok |
-| 013 | `SAFEIO-001` | VERIFIED | make check: pass; 15 packages ok |
-| 014 | `SAFEIO-002` | VERIFIED | make check: pass; 15 packages ok |
-| 015 | `SAFEIO-003` | VERIFIED | make check: pass; 15 packages ok |
-| 016 | `SAFEIO-004` | VERIFIED | make check: pass; 15 packages ok |
-| 017 | `SAFEIO-005` | VERIFIED | make check: pass; 15 packages ok |
-| 018 | `SAFEIO-006` | VERIFIED | make check: pass; 15 packages ok |
-| 019 | `SAFEIO-007` | VERIFIED | make check: pass; 15 packages ok |
-| 020 | `SAFEIO-008` | VERIFIED | make check: pass; 15 packages ok |
-| 021 | `CANARY-A` | VERIFIED | make check: pass; 15 packages ok |
-| 022 | `CI-010` | VERIFIED | make check: pass; 15 packages ok |
+| 001 | `REPO-001` | VERIFIED | make check: pass; 17 packages ok |
+| 002 | `REPO-002` | VERIFIED | make check: pass; 17 packages ok |
+| 003 | `REPO-003` | VERIFIED | make check: pass; 17 packages ok |
+| 004 | `CI-001` | VERIFIED | make check: pass; 17 packages ok |
+| 005 | `CI-002` | VERIFIED | make check: pass; 17 packages ok |
+| 006 | `CI-003` | VERIFIED | make check: pass; 17 packages ok |
+| 007 | `CI-004` | VERIFIED | make check: pass; 17 packages ok |
+| 008 | `CI-005` | VERIFIED | make check: pass; 17 packages ok |
+| 009 | `CI-006` | VERIFIED | make check: pass; 17 packages ok |
+| 010 | `CI-007` | VERIFIED | make check: pass; 17 packages ok |
+| 011 | `CI-008` | VERIFIED | make check: pass; 17 packages ok |
+| 012 | `CI-009` | VERIFIED | make check: pass; 17 packages ok |
+| 013 | `SAFEIO-001` | VERIFIED | make check: pass; 17 packages ok |
+| 014 | `SAFEIO-002` | VERIFIED | make check: pass; 17 packages ok |
+| 015 | `SAFEIO-003` | VERIFIED | make check: pass; 17 packages ok |
+| 016 | `SAFEIO-004` | VERIFIED | make check: pass; 17 packages ok |
+| 017 | `SAFEIO-005` | VERIFIED | make check: pass; 17 packages ok |
+| 018 | `SAFEIO-006` | VERIFIED | make check: pass; 17 packages ok |
+| 019 | `SAFEIO-007` | VERIFIED | make check: pass; 17 packages ok |
+| 020 | `SAFEIO-008` | VERIFIED | make check: pass; 17 packages ok |
+| 021 | `CANARY-A` | VERIFIED | make check: pass; 17 packages ok |
+| 022 | `CI-010` | VERIFIED | make check: pass; 17 packages ok |
 
 ## Phase E1 — Certificate engine
 
@@ -52,14 +52,14 @@ verification evidence together, and is not claimed for any item here.
 
 | # | ID | Status | Evidence |
 |---|---|---|---|
-| 023 | `X509-001` | VERIFIED | make check: pass; 15 packages ok |
-| 024 | `X509-002` | VERIFIED | make check: pass; 15 packages ok |
-| 025 | `X509-003` | VERIFIED | make check: pass; 15 packages ok |
-| 026 | `X509-004` | VERIFIED | make check: pass; 15 packages ok |
-| 027 | `X509-005` | VERIFIED | make check: pass; 15 packages ok |
-| 028 | `X509-006` | VERIFIED | make check: pass; 15 packages ok |
-| 029 | `X509-007` | VERIFIED | make check: pass; 15 packages ok |
-| 030 | `X509-008` | VERIFIED | make check: pass; 15 packages ok |
+| 023 | `X509-001` | VERIFIED | make check: pass; 17 packages ok |
+| 024 | `X509-002` | VERIFIED | make check: pass; 17 packages ok |
+| 025 | `X509-003` | VERIFIED | make check: pass; 17 packages ok |
+| 026 | `X509-004` | VERIFIED | make check: pass; 17 packages ok |
+| 027 | `X509-005` | VERIFIED | make check: pass; 17 packages ok |
+| 028 | `X509-006` | VERIFIED | make check: pass; 17 packages ok |
+| 029 | `X509-007` | VERIFIED | make check: pass; 17 packages ok |
+| 030 | `X509-008` | VERIFIED | make check: pass; 17 packages ok |
 
 ## Phase E2 — Scanner
 
@@ -67,16 +67,16 @@ verification evidence together, and is not claimed for any item here.
 
 | # | ID | Status | Evidence |
 |---|---|---|---|
-| 031 | `SCOPE-001` | VERIFIED | make check: pass; 15 packages ok |
-| 032 | `SCOPE-002` | VERIFIED | make check: pass; 15 packages ok |
-| 033 | `SCAN-001` | VERIFIED | make check: pass; 15 packages ok |
-| 034 | `SCAN-002` | VERIFIED | make check: pass; 15 packages ok |
-| 035 | `SCAN-003` | VERIFIED | make check: pass; 15 packages ok |
-| 036 | `SCAN-004` | VERIFIED | make check: pass; 15 packages ok |
-| 037 | `SCAN-005` | VERIFIED | make check: pass; 15 packages ok |
-| 038 | `SCAN-006` | VERIFIED | make check: pass; 15 packages ok |
-| 039 | `SCAN-007` | VERIFIED | make check: pass; 15 packages ok |
-| 040 | `SCAN-008` | VERIFIED | make check: pass; 15 packages ok |
+| 031 | `SCOPE-001` | VERIFIED | make check: pass; 17 packages ok |
+| 032 | `SCOPE-002` | VERIFIED | make check: pass; 17 packages ok |
+| 033 | `SCAN-001` | VERIFIED | make check: pass; 17 packages ok |
+| 034 | `SCAN-002` | VERIFIED | make check: pass; 17 packages ok |
+| 035 | `SCAN-003` | VERIFIED | make check: pass; 17 packages ok |
+| 036 | `SCAN-004` | VERIFIED | make check: pass; 17 packages ok |
+| 037 | `SCAN-005` | VERIFIED | make check: pass; 17 packages ok |
+| 038 | `SCAN-006` | VERIFIED | make check: pass; 17 packages ok |
+| 039 | `SCAN-007` | VERIFIED | make check: pass; 17 packages ok |
+| 040 | `SCAN-008` | VERIFIED | make check: pass; 17 packages ok |
 
 ## Phase E3 — cmd/certscan (MVP v0)
 
@@ -84,15 +84,15 @@ verification evidence together, and is not claimed for any item here.
 
 | # | ID | Status | Evidence |
 |---|---|---|---|
-| 041 | `CLI-001` | VERIFIED | make check: pass; 15 packages ok |
-| 042 | `CLI-002` | VERIFIED | make check: pass; 15 packages ok |
-| 043 | `CLI-003` | VERIFIED | make check: pass; 15 packages ok |
-| 044 | `CLI-004` | VERIFIED | make check: pass; 15 packages ok |
-| 045 | `CLI-005` | VERIFIED | make check: pass; 15 packages ok |
-| 046 | `CLI-006` | VERIFIED | make check: pass; 15 packages ok |
-| 047 | `REL-001` | VERIFIED | make check: pass; 15 packages ok |
-| 048 | `REL-002` | VERIFIED | make check: pass; 15 packages ok |
-| 049 | `REL-003` | VERIFIED | make check: pass; 15 packages ok |
+| 041 | `CLI-001` | VERIFIED | make check: pass; 17 packages ok |
+| 042 | `CLI-002` | VERIFIED | make check: pass; 17 packages ok |
+| 043 | `CLI-003` | VERIFIED | make check: pass; 17 packages ok |
+| 044 | `CLI-004` | VERIFIED | make check: pass; 17 packages ok |
+| 045 | `CLI-005` | VERIFIED | make check: pass; 17 packages ok |
+| 046 | `CLI-006` | VERIFIED | make check: pass; 17 packages ok |
+| 047 | `REL-001` | VERIFIED | make check: pass; 17 packages ok |
+| 048 | `REL-002` | VERIFIED | make check: pass; 17 packages ok |
+| 049 | `REL-003` | VERIFIED | make check: pass; 17 packages ok |
 
 ## Phase E4 — AWS read-only enumeration
 
@@ -100,13 +100,13 @@ verification evidence together, and is not claimed for any item here.
 
 | # | ID | Status | Evidence |
 |---|---|---|---|
-| 050 | `AWS-001` | VERIFIED | make check: pass; 15 packages ok |
-| 051 | `AWS-007` | VERIFIED | make check: pass; 15 packages ok |
-| 052 | `AWS-002` | VERIFIED | make check: pass; 15 packages ok |
-| 053 | `AWS-003` | VERIFIED | make check: pass; 15 packages ok |
-| 054 | `AWS-004` | VERIFIED | make check: pass; 15 packages ok |
-| 055 | `AWS-005` | VERIFIED | make check: pass; 15 packages ok |
-| 056 | `AWS-006` | VERIFIED | make check: pass; 15 packages ok |
+| 050 | `AWS-001` | VERIFIED | make check: pass; 17 packages ok |
+| 051 | `AWS-007` | VERIFIED | make check: pass; 17 packages ok |
+| 052 | `AWS-002` | VERIFIED | make check: pass; 17 packages ok |
+| 053 | `AWS-003` | VERIFIED | make check: pass; 17 packages ok |
+| 054 | `AWS-004` | VERIFIED | make check: pass; 17 packages ok |
+| 055 | `AWS-005` | VERIFIED | make check: pass; 17 packages ok |
+| 056 | `AWS-006` | VERIFIED | make check: pass; 17 packages ok |
 | 057 | `AWS-008` | VERIFIED | executed 2026-09-20 against localstack 3.8; seeded ACM -> findings=1 |
 
 ## Phase E5 — Test lab
@@ -153,19 +153,19 @@ verification evidence together, and is not claimed for any item here.
 
 ## Phase E7 — Local end-to-end prototype
 
-*5 items — 4 not_started, 1 verified*
+*5 items — 1 in_progress, 3 not_started, 1 verified*
 
 | # | ID | Status | Evidence |
 |---|---|---|---|
 | 086 | `PROTO-001` | VERIFIED | renaming/retyping/removing a field fails with a diff |
 | 087 | `LOCAL-001` | NOT_STARTED | — |
 | 088 | `LOCAL-002` | NOT_STARTED | — |
-| 089 | `LOCAL-003` | NOT_STARTED | — |
+| 089 | `LOCAL-003` | IN_PROGRESS | 24h unattended run STARTED 2026-09-30T17:17Z; must not be VERIFIED early |
 | 090 | `CANARY-B` | NOT_STARTED | — |
 
 ## Phase E8 — Control plane foundation
 
-*12 items — 3 not_started, 9 verified*
+*12 items — 1 not_started, 11 verified*
 
 | # | ID | Status | Evidence |
 |---|---|---|---|
@@ -176,15 +176,15 @@ verification evidence together, and is not claimed for any item here.
 | 095 | `SCHEMA-002..010` | VERIFIED | 17 tests inc. 14-table sweep; mutations: FORCE caught, session-SET caught |
 | 096 | `SCHEMA-013` | NOT_STARTED | sqlc not wired; queries are hand-written pgx |
 | 097 | `TENANT-004` | VERIFIED | 17 tests inc. 14-table sweep; mutations: FORCE caught, session-SET caught |
-| 098 | `AUTH-001` | NOT_STARTED | OIDC discovery + Authorization Code/PKCE flow NOT built |
+| 098 | `AUTH-001` | VERIFIED | 18 OIDC tests vs a real local IdP; mutations 5/6 caught, 6th exposed a bad test which was then fixed |
 | 099 | `AUTH-002` | VERIFIED | 6 of 6 mutations caught (disabled user, replay, idle, rotation, role, fail-open) |
-| 100 | `AUTH-003` | NOT_STARTED | domain-to-tenant JIT provisioning NOT built |
+| 100 | `AUTH-003` | VERIFIED | 18 OIDC tests vs a real local IdP; mutations 5/6 caught, 6th exposed a bad test which was then fixed |
 | 101 | `AUTH-004` | VERIFIED | 6 of 6 mutations caught (disabled user, replay, idle, rotation, role, fail-open) |
 | 102 | `AUTH-005` | VERIFIED | 6 of 6 mutations caught (disabled user, replay, idle, rotation, role, fail-open) |
 
 ## Phase E9 — Enrolment, protocol and ingest
 
-*18 items — 18 not_started*
+*18 items — 7 not_started, 11 verified*
 
 | # | ID | Status | Evidence |
 |---|---|---|---|
@@ -195,31 +195,31 @@ verification evidence together, and is not claimed for any item here.
 | 107 | `PROTO-002` | NOT_STARTED | — |
 | 108 | `INGEST-001` | NOT_STARTED | — |
 | 109 | `INGEST-002` | NOT_STARTED | — |
-| 110 | `INGEST-003` | NOT_STARTED | — |
-| 111 | `INGEST-004` | NOT_STARTED | — |
-| 112 | `INGEST-005` | NOT_STARTED | — |
-| 113 | `EP-001..006` | NOT_STARTED | — |
-| 114 | `INGEST-006` | NOT_STARTED | — |
-| 115 | `PROTO-003` | NOT_STARTED | — |
-| 116 | `PROTO-004` | NOT_STARTED | — |
-| 117 | `PROTO-005..006` | NOT_STARTED | — |
-| 118 | `PROTO-007` | NOT_STARTED | — |
-| 119 | `PROTO-008` | NOT_STARTED | — |
-| 120 | `PROTO-009` | NOT_STARTED | — |
+| 110 | `INGEST-003` | VERIFIED | 16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect |
+| 111 | `INGEST-004` | VERIFIED | 16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect |
+| 112 | `INGEST-005` | VERIFIED | 16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect |
+| 113 | `EP-001..006` | VERIFIED | 16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect |
+| 114 | `INGEST-006` | VERIFIED | 16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect |
+| 115 | `PROTO-003` | VERIFIED | 16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect |
+| 116 | `PROTO-004` | VERIFIED | 16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect |
+| 117 | `PROTO-005..006` | VERIFIED | 16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect |
+| 118 | `PROTO-007` | VERIFIED | 16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect |
+| 119 | `PROTO-008` | VERIFIED | 16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect |
+| 120 | `PROTO-009` | VERIFIED | 16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect |
 
 ## Phase E10 — Scheduling and drift
 
-*12 items — 12 not_started*
+*12 items — 5 not_started, 7 verified*
 
 | # | ID | Status | Evidence |
 |---|---|---|---|
-| 121 | `SCHED-001..002` | NOT_STARTED | — |
-| 122 | `SCHED-003` | NOT_STARTED | — |
-| 123 | `SCHED-004..005` | NOT_STARTED | — |
-| 124 | `SCHED-006` | NOT_STARTED | — |
-| 125 | `SCHED-007` | NOT_STARTED | — |
-| 126 | `SCHED-008` | NOT_STARTED | — |
-| 127 | `DRIFT-001` | NOT_STARTED | — |
+| 121 | `SCHED-001..002` | VERIFIED | 16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect |
+| 122 | `SCHED-003` | VERIFIED | 9 tests vs real PostgreSQL; idempotency + restart + out-of-order + isolation |
+| 123 | `SCHED-004..005` | VERIFIED | 9 tests vs real PostgreSQL; idempotency + restart + out-of-order + isolation |
+| 124 | `SCHED-006` | VERIFIED | 9 tests vs real PostgreSQL; idempotency + restart + out-of-order + isolation |
+| 125 | `SCHED-007` | VERIFIED | 9 tests vs real PostgreSQL; idempotency + restart + out-of-order + isolation |
+| 126 | `SCHED-008` | VERIFIED | 9 tests vs real PostgreSQL; idempotency + restart + out-of-order + isolation |
+| 127 | `DRIFT-001` | VERIFIED | 9 tests vs real PostgreSQL; idempotency + restart + out-of-order + isolation |
 | 128 | `DRIFT-004` | NOT_STARTED | — |
 | 129 | `DRIFT-005..007` | NOT_STARTED | — |
 | 130 | `DRIFT-008` | NOT_STARTED | — |
@@ -301,6 +301,6 @@ verification evidence together, and is not claimed for any item here.
 | 174 | `Onboarding documentation; support SLA; manual invoicing` | NOT_STARTED | — |
 | 175 | `First paying customer — signed annual contract ≥$9,000` | BLOCKED_EXTERNAL | first paying customer, signed contract >= $9,000 |
 | 176 | `V1: inference, policy rules, attestation, Azure/GCP, webhooks, billing, self-serve, load test` | NOT_STARTED | — |
-| 023 | `fingerprint = SHA-256(full DER)` | VERIFIED | make check: pass; 15 packages ok |
-| 026 | `Wildcard SAN semantics` | VERIFIED | make check: pass; 15 packages ok |
+| 023 | `fingerprint = SHA-256(full DER)` | VERIFIED | make check: pass; 17 packages ok |
+| 026 | `Wildcard SAN semantics` | VERIFIED | make check: pass; 17 packages ok |
 | 108 | `Schema-closed ingest decoder` | NOT_STARTED | — |

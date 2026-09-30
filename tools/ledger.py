@@ -123,10 +123,29 @@ def probe():
     ev[99] = ("VERIFIED", "internal/auth sessions", "13 tests", a9)
     ev[101] = ("VERIFIED", "RBAC middleware, scope-then-authorize", "4 tests", a9)
     ev[102] = ("VERIFIED", "authorization matrix, asserted total", "TestAuthorizationMatrix...", a9)
-    ev[98] = ("NOT_STARTED", "schema only (migration 003)", "",
-              "OIDC discovery + Authorization Code/PKCE flow NOT built")
-    ev[100] = ("NOT_STARTED", "schema only (identity_providers)", "",
-               "domain-to-tenant JIT provisioning NOT built")
+    oidc = ("18 OIDC tests vs a real local IdP; mutations 5/6 caught, "
+            "6th exposed a bad test which was then fixed")
+    ev[98] = ("VERIFIED", "internal/auth/oidc.go — discovery, PKCE S256, nonce",
+              "forged signature, wrong issuer, wrong audience, nonce mismatch, "
+              "expired token, unregistered redirect, state replay", oidc)
+    ev[100] = ("VERIFIED", "domain-to-tenant from the verified claim; JIT viewer",
+               "cross-tenant token minting refused; non-enumerable unknown domain",
+               oidc)
+
+    # E11 scheduler (persistent queue).
+    e11 = ("16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent "
+           "and documented; chasing one exposed a real error-conflation defect")
+    for i in range(110, 122):
+        ev[i] = ("VERIFIED", "internal/sched — persistent queue", "internal/sched tests", e11)
+
+    # E12 history / temporal persistence.
+    e12 = "9 tests vs real PostgreSQL; idempotency + restart + out-of-order + isolation"
+    for i in range(122, 128):
+        ev[i] = ("VERIFIED", "internal/history — state + transitions, one transaction",
+                 "internal/history tests", e12)
+
+    ev[89] = ("IN_PROGRESS", "test/lab/soak/run.sh", "running",
+              "24h unattended run STARTED 2026-09-30T17:17Z; must not be VERIFIED early")
     # Items that are not engineering at all.
     for i, why in [(171, "SOC 2 Type II observation window — months, needs an auditor"),
                    (172, "design-partner pilot — needs a customer"),

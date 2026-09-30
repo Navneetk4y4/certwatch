@@ -18,3 +18,4 @@
 {"cycle":18,"elapsed":1027,"at":"2026-09-30T17:34:17Z","outcome":"FAILURE","matched":"3 of 4 addresses","rss_kb":2096,"open_fds":10}
 {"cycle":19,"elapsed":1087,"at":"2026-09-30T17:35:18Z","outcome":"FAILURE","matched":"3 of 4 addresses","rss_kb":2096,"open_fds":10}
 {"cycle":20,"elapsed":1148,"at":"2026-09-30T17:36:18Z","outcome":"FAILURE","matched":"3 of 4 addresses","rss_kb":2096,"open_fds":10}
+{"cycle":21,"elapsed":1208,"at":"2026-09-30T17:37:18Z","outcome":"FAILURE","matched":"3 of 4 addresses","rss_kb":1984,"open_fds":10}

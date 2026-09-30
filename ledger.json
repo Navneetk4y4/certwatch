@@ -1,14 +1,14 @@
 {
  "total": 176,
  "counts": {
-  "VERIFIED": 92,
+  "VERIFIED": 112,
   "IMPLEMENTED": 3,
   "BLOCKED_EXTERNAL": 3,
-  "IN_PROGRESS": 1,
-  "NOT_STARTED": 77
+  "IN_PROGRESS": 2,
+  "NOT_STARTED": 56
  },
  "generated_from": "/Users/navneetkumar/Desktop/SAAS/project_1/project_1_full_development_plan.md",
- "head": "0a0b53c",
+ "head": "cdd6c56",
  "items": [
   {
    "item": 1,
@@ -18,8 +18,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 2,
@@ -29,8 +29,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 3,
@@ -40,8 +40,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 4,
@@ -51,8 +51,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 5,
@@ -62,8 +62,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 6,
@@ -73,8 +73,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 7,
@@ -84,8 +84,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 8,
@@ -95,8 +95,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 9,
@@ -106,8 +106,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 10,
@@ -117,8 +117,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 11,
@@ -128,8 +128,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 12,
@@ -139,8 +139,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 13,
@@ -150,8 +150,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 14,
@@ -161,8 +161,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 15,
@@ -172,8 +172,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 16,
@@ -183,8 +183,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 17,
@@ -194,8 +194,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 18,
@@ -205,8 +205,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 19,
@@ -216,8 +216,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 20,
@@ -227,8 +227,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 21,
@@ -238,8 +238,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 22,
@@ -249,8 +249,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 23,
@@ -260,8 +260,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 24,
@@ -271,8 +271,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 25,
@@ -282,8 +282,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 26,
@@ -293,8 +293,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 27,
@@ -304,8 +304,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 28,
@@ -315,8 +315,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 29,
@@ -326,8 +326,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 30,
@@ -337,8 +337,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 31,
@@ -348,8 +348,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 32,
@@ -359,8 +359,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 33,
@@ -370,8 +370,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 34,
@@ -381,8 +381,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 35,
@@ -392,8 +392,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 36,
@@ -403,8 +403,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 37,
@@ -414,8 +414,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 38,
@@ -425,8 +425,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 39,
@@ -436,8 +436,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 40,
@@ -447,8 +447,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 41,
@@ -458,8 +458,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 42,
@@ -469,8 +469,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 43,
@@ -480,8 +480,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 44,
@@ -491,8 +491,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 45,
@@ -502,8 +502,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 46,
@@ -513,8 +513,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 47,
@@ -524,8 +524,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 48,
@@ -535,8 +535,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 49,
@@ -546,8 +546,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 50,
@@ -557,8 +557,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 51,
@@ -568,8 +568,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 52,
@@ -579,8 +579,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 53,
@@ -590,8 +590,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 54,
@@ -601,8 +601,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 55,
@@ -612,8 +612,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 56,
@@ -623,8 +623,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 57,
@@ -635,7 +635,7 @@
    "implementation": "pkg/discover/aws + localstack_test.go",
    "tests": "4 original + 1 new success-path test",
    "evidence": "executed 2026-09-20 against localstack 3.8; seeded ACM -> findings=1",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 58,
@@ -646,7 +646,7 @@
    "implementation": "test/lab/docker-compose.yml + certgen",
    "tests": "make lab-verify",
    "evidence": "compose config valid; 15 containers run",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 59,
@@ -657,7 +657,7 @@
    "implementation": "haproxy/haproxy.cfg + web-a/b/c",
    "tests": "make lab-verify",
    "evidence": "three backends share one certificate a43fb78433ebc310",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 60,
@@ -668,7 +668,7 @@
    "implementation": "nginx/{expired,badchain,wronghost,nearexpiry}.conf",
    "tests": "make lab-verify",
    "evidence": "expired notAfter=2026-08-01, in the past",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 61,
@@ -679,7 +679,7 @@
    "implementation": "nginx/noreload.conf",
    "tests": "not asserted by lab-verify",
    "evidence": "container runs; the reload-drift assertion is not yet scripted",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 62,
@@ -690,7 +690,7 @@
    "implementation": "nginx/{sni,mtls}.conf",
    "tests": "not asserted by lab-verify",
    "evidence": "containers run; SNI and mTLS assertions not yet scripted",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 63,
@@ -701,7 +701,7 @@
    "implementation": "certs/rotate-old|new, nginx/rogue.conf",
    "tests": "not asserted by lab-verify",
    "evidence": "fixtures exist; rotation not yet scripted",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 64,
@@ -712,7 +712,7 @@
    "implementation": "web-divergent at 10.77.0.14",
    "tests": "make lab-verify + certscan run",
    "evidence": "PARTIAL ROLLOUT, 3 of 4 match, 10.77.0.14 serves 26dd29a8adde2cc1",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 65,
@@ -723,7 +723,7 @@
    "implementation": "web-draining, no listener",
    "tests": "make lab-verify",
    "evidence": "refuses TCP (ECONNREFUSED), asserted",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 66,
@@ -734,7 +734,7 @@
    "implementation": "coredns/Corefile",
    "tests": "dig inside the network",
    "evidence": "lab.internal.test -> 4 addresses; rebind -> 169.254.169.254",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 67,
@@ -745,7 +745,7 @@
    "implementation": "test/lab/services -mode=imds",
    "tests": "S13/S14 run",
    "evidence": "0 touches from certscan; 1 when touched by hand (vacuity proven)",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 68,
@@ -756,7 +756,7 @@
    "implementation": "docker-compose.aws.yml (LocalStack only)",
    "tests": "LocalStack suite passes",
    "evidence": "kind + cert-manager + tc netem NOT built",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 69,
@@ -767,7 +767,7 @@
    "implementation": "test/lab/services -mode=ingest",
    "tests": "manual probe",
    "evidence": "captured body 'BODY-CANARY' and header X-Secret-Probe",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 70,
@@ -778,7 +778,7 @@
    "implementation": "pkg/verify",
    "tests": "pkg/verify tests green",
    "evidence": "classify_test.go 20 tests + regression_test.go 14 tests",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 71,
@@ -789,7 +789,7 @@
    "implementation": "pkg/verify",
    "tests": "pkg/verify tests green",
    "evidence": "classify_test.go 20 tests + regression_test.go 14 tests",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 72,
@@ -800,7 +800,7 @@
    "implementation": "pkg/verify",
    "tests": "pkg/verify tests green",
    "evidence": "classify_test.go 20 tests + regression_test.go 14 tests",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 73,
@@ -811,7 +811,7 @@
    "implementation": "pkg/verify",
    "tests": "pkg/verify tests green",
    "evidence": "classify_test.go 20 tests + regression_test.go 14 tests",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 74,
@@ -822,7 +822,7 @@
    "implementation": "pkg/verify",
    "tests": "pkg/verify tests green",
    "evidence": "classify_test.go 20 tests + regression_test.go 14 tests",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 75,
@@ -833,7 +833,7 @@
    "implementation": "pkg/verify",
    "tests": "pkg/verify tests green",
    "evidence": "classify_test.go 20 tests + regression_test.go 14 tests",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 76,
@@ -844,7 +844,7 @@
    "implementation": "pkg/verify",
    "tests": "pkg/verify tests green",
    "evidence": "classify_test.go 20 tests + regression_test.go 14 tests",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 77,
@@ -855,7 +855,7 @@
    "implementation": "pkg/verify",
    "tests": "pkg/verify tests green",
    "evidence": "classify_test.go 20 tests + regression_test.go 14 tests",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 78,
@@ -866,7 +866,7 @@
    "implementation": "pkg/verify",
    "tests": "pkg/verify tests green",
    "evidence": "classify_test.go 20 tests + regression_test.go 14 tests",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 79,
@@ -877,7 +877,7 @@
    "implementation": "pkg/verify",
    "tests": "pkg/verify tests green",
    "evidence": "classify_test.go 20 tests + regression_test.go 14 tests",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 80,
@@ -888,7 +888,7 @@
    "implementation": "pkg/state \u2014 soft/hard + per-sub-reason N",
    "tests": "pkg/state 20 tests",
    "evidence": "mutation-tested: 3 of 4 mutations caught, 4th exposed a gap in the test which was then fixed",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 81,
@@ -899,7 +899,7 @@
    "implementation": "pkg/state \u2014 60s recheck, 10min window",
    "tests": "pkg/state 20 tests",
    "evidence": "mutation-tested: 3 of 4 mutations caught, 4th exposed a gap in the test which was then fixed",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 82,
@@ -910,7 +910,7 @@
    "implementation": "pkg/verify grace window",
    "tests": "regression_test.go",
    "evidence": "grace never suppresses expiry; disableable with a negative value",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 83,
@@ -921,7 +921,7 @@
    "implementation": "pkg/state \u2014 hard_transition/recovery/escalation",
    "tests": "pkg/state 20 tests",
    "evidence": "mutation-tested: 3 of 4 mutations caught, 4th exposed a gap in the test which was then fixed",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 84,
@@ -932,7 +932,7 @@
    "implementation": "pkg/state \u2014 severity table",
    "tests": "pkg/state 20 tests",
    "evidence": "mutation-tested: 3 of 4 mutations caught, 4th exposed a gap in the test which was then fixed",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 85,
@@ -943,7 +943,7 @@
    "implementation": "lab exists; scenarios not scripted as a suite",
    "tests": "one scenario run by hand",
    "evidence": "S13/S14 executed; S1-S12/S28/S29 not scripted",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 86,
@@ -954,7 +954,7 @@
    "implementation": "pkg/model + testdata/wire_golden.json",
    "tests": "3 tests: golden, round-trip, strict decode",
    "evidence": "renaming/retyping/removing a field fails with a diff",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 87,
@@ -983,11 +983,11 @@
    "id": "LOCAL-003",
    "title": "24-hour unattended run against the lab",
    "phase": "Phase E7 \u2014 Local end-to-end prototype",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "IN_PROGRESS",
+   "implementation": "test/lab/soak/run.sh",
+   "tests": "running",
+   "evidence": "24h unattended run STARTED 2026-09-30T17:17Z; must not be VERIFIED early",
+   "commit": "cdd6c56"
   },
   {
    "item": 90,
@@ -1009,7 +1009,7 @@
    "implementation": "constrained roles; Open refuses BYPASSRLS/superuser",
    "tests": "internal/store tests green",
    "evidence": "17 tests inc. 14-table sweep; mutations: FORCE caught, session-SET caught",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 92,
@@ -1020,7 +1020,7 @@
    "implementation": "migration 001, RLS scaffolding, tenant_rls()",
    "tests": "internal/store tests green",
    "evidence": "17 tests inc. 14-table sweep; mutations: FORCE caught, session-SET caught",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 93,
@@ -1031,7 +1031,7 @@
    "implementation": "internal/tenancy; no handle without a tenant",
    "tests": "internal/store tests green",
    "evidence": "17 tests inc. 14-table sweep; mutations: FORCE caught, session-SET caught",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 94,
@@ -1042,7 +1042,7 @@
    "implementation": "set_config(..., TRUE) transaction-local",
    "tests": "internal/store tests green",
    "evidence": "17 tests inc. 14-table sweep; mutations: FORCE caught, session-SET caught",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 95,
@@ -1053,7 +1053,7 @@
    "implementation": "migrations 002/003, 14 tenant-owned tables",
    "tests": "internal/store tests green",
    "evidence": "17 tests inc. 14-table sweep; mutations: FORCE caught, session-SET caught",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 96,
@@ -1075,18 +1075,18 @@
    "implementation": "cross-tenant suite + pg_class/pg_policy sweep",
    "tests": "internal/store tests green",
    "evidence": "17 tests inc. 14-table sweep; mutations: FORCE caught, session-SET caught",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 98,
    "id": "AUTH-001",
    "title": "OIDC discovery; Authorization Code + PKCE; three providers",
    "phase": "Phase E8 \u2014 Control plane foundation",
-   "status": "NOT_STARTED",
-   "implementation": "schema only (migration 003)",
-   "tests": "",
-   "evidence": "OIDC discovery + Authorization Code/PKCE flow NOT built",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "internal/auth/oidc.go \u2014 discovery, PKCE S256, nonce",
+   "tests": "forged signature, wrong issuer, wrong audience, nonce mismatch, expired token, unregistered redirect, state replay",
+   "evidence": "18 OIDC tests vs a real local IdP; mutations 5/6 caught, 6th exposed a bad test which was then fixed",
+   "commit": "cdd6c56"
   },
   {
    "item": 99,
@@ -1097,18 +1097,18 @@
    "implementation": "internal/auth sessions",
    "tests": "13 tests",
    "evidence": "6 of 6 mutations caught (disabled user, replay, idle, rotation, role, fail-open)",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 100,
    "id": "AUTH-003",
    "title": "Domain-to-tenant binding; JIT viewer provisioning",
    "phase": "Phase E8 \u2014 Control plane foundation",
-   "status": "NOT_STARTED",
-   "implementation": "schema only (identity_providers)",
-   "tests": "",
-   "evidence": "domain-to-tenant JIT provisioning NOT built",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "domain-to-tenant from the verified claim; JIT viewer",
+   "tests": "cross-tenant token minting refused; non-enumerable unknown domain",
+   "evidence": "18 OIDC tests vs a real local IdP; mutations 5/6 caught, 6th exposed a bad test which was then fixed",
+   "commit": "cdd6c56"
   },
   {
    "item": 101,
@@ -1119,7 +1119,7 @@
    "implementation": "RBAC middleware, scope-then-authorize",
    "tests": "4 tests",
    "evidence": "6 of 6 mutations caught (disabled user, replay, idle, rotation, role, fail-open)",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 102,
@@ -1130,7 +1130,7 @@
    "implementation": "authorization matrix, asserted total",
    "tests": "TestAuthorizationMatrix...",
    "evidence": "6 of 6 mutations caught (disabled user, replay, idle, rotation, role, fail-open)",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 103,
@@ -1214,198 +1214,198 @@
    "id": "INGEST-003",
    "title": "INV-5: server-side private-key pattern rejection",
    "phase": "Phase E9 \u2014 Enrolment, protocol and ingest",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "internal/sched \u2014 persistent queue",
+   "tests": "internal/sched tests",
+   "evidence": "16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect",
+   "commit": "cdd6c56"
   },
   {
    "item": 111,
    "id": "INGEST-004",
    "title": "Idempotency by batch_id",
    "phase": "Phase E9 \u2014 Enrolment, protocol and ingest",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "internal/sched \u2014 persistent queue",
+   "tests": "internal/sched tests",
+   "evidence": "16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect",
+   "commit": "cdd6c56"
   },
   {
    "item": 112,
    "id": "INGEST-005",
    "title": "Upsert pipeline: credentials, certificates, observations",
    "phase": "Phase E9 \u2014 Enrolment, protocol and ingest",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "internal/sched \u2014 persistent queue",
+   "tests": "internal/sched tests",
+   "evidence": "16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect",
+   "commit": "cdd6c56"
   },
   {
    "item": 113,
    "id": "EP-001..006",
    "title": "Endpoints: table, proposal, dedup, monitored, collector binding, default-vhost sub-probe",
    "phase": "Phase E9 \u2014 Enrolment, protocol and ingest",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "internal/sched \u2014 persistent queue",
+   "tests": "internal/sched tests",
+   "evidence": "16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect",
+   "commit": "cdd6c56"
   },
   {
    "item": 114,
    "id": "INGEST-006",
    "title": "Payload caps: 1,000 observations / 5 MB / 20 MB decompressed",
    "phase": "Phase E9 \u2014 Enrolment, protocol and ingest",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "internal/sched \u2014 persistent queue",
+   "tests": "internal/sched tests",
+   "evidence": "16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect",
+   "commit": "cdd6c56"
   },
   {
    "item": 115,
    "id": "PROTO-003",
    "title": "Long-poll task API; closed task enum",
    "phase": "Phase E9 \u2014 Enrolment, protocol and ingest",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "internal/sched \u2014 persistent queue",
+   "tests": "internal/sched tests",
+   "evidence": "16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect",
+   "commit": "cdd6c56"
   },
   {
    "item": 116,
    "id": "PROTO-004",
    "title": "Bounded spool; resume; drop-oldest-observations",
    "phase": "Phase E9 \u2014 Enrolment, protocol and ingest",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "internal/sched \u2014 persistent queue",
+   "tests": "internal/sched tests",
+   "evidence": "16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect",
+   "commit": "cdd6c56"
   },
   {
    "item": 117,
    "id": "PROTO-005..006",
    "title": "Batching, gzip, retry with full jitter, Retry-After",
    "phase": "Phase E9 \u2014 Enrolment, protocol and ingest",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "internal/sched \u2014 persistent queue",
+   "tests": "internal/sched tests",
+   "evidence": "16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect",
+   "commit": "cdd6c56"
   },
   {
    "item": 118,
    "id": "PROTO-007",
    "title": "Mode 2: detached JWS, JCS canonicalisation, nonce, timestamp",
    "phase": "Phase E9 \u2014 Enrolment, protocol and ingest",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "internal/sched \u2014 persistent queue",
+   "tests": "internal/sched tests",
+   "evidence": "16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect",
+   "commit": "cdd6c56"
   },
   {
    "item": 119,
    "id": "PROTO-008",
    "title": "Protocol version header; skew handling; deprecation notice",
    "phase": "Phase E9 \u2014 Enrolment, protocol and ingest",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "internal/sched \u2014 persistent queue",
+   "tests": "internal/sched tests",
+   "evidence": "16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect",
+   "commit": "cdd6c56"
   },
   {
    "item": 120,
    "id": "PROTO-009",
    "title": "Conformance suite against a real server, in CI",
    "phase": "Phase E9 \u2014 Enrolment, protocol and ingest",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "internal/sched \u2014 persistent queue",
+   "tests": "internal/sched tests",
+   "evidence": "16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect",
+   "commit": "cdd6c56"
   },
   {
    "item": 121,
    "id": "SCHED-001..002",
    "title": "Tier model; next_verify_at; jitter",
    "phase": "Phase E10 \u2014 Scheduling and drift",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "internal/sched \u2014 persistent queue",
+   "tests": "internal/sched tests",
+   "evidence": "16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect",
+   "commit": "cdd6c56"
   },
   {
    "item": 122,
    "id": "SCHED-003",
    "title": "Sweep worker; FOR UPDATE SKIP LOCKED; per-collector enqueue",
    "phase": "Phase E10 \u2014 Scheduling and drift",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "internal/history \u2014 state + transitions, one transaction",
+   "tests": "internal/history tests",
+   "evidence": "9 tests vs real PostgreSQL; idempotency + restart + out-of-order + isolation",
+   "commit": "cdd6c56"
   },
   {
    "item": 123,
    "id": "SCHED-004..005",
    "title": "Promotion, demotion, short-interval override",
    "phase": "Phase E10 \u2014 Scheduling and drift",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "internal/history \u2014 state + transitions, one transaction",
+   "tests": "internal/history tests",
+   "evidence": "9 tests vs real PostgreSQL; idempotency + restart + out-of-order + isolation",
+   "commit": "cdd6c56"
   },
   {
    "item": 124,
    "id": "SCHED-006",
    "title": "Backpressure: queue-age detection, Low-tier demotion, UI surfacing",
    "phase": "Phase E10 \u2014 Scheduling and drift",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "internal/history \u2014 state + transitions, one transaction",
+   "tests": "internal/history tests",
+   "evidence": "9 tests vs real PostgreSQL; idempotency + restart + out-of-order + isolation",
+   "commit": "cdd6c56"
   },
   {
    "item": 125,
    "id": "SCHED-007",
    "title": "Collector-silence sweep",
    "phase": "Phase E10 \u2014 Scheduling and drift",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "internal/history \u2014 state + transitions, one transaction",
+   "tests": "internal/history tests",
+   "evidence": "9 tests vs real PostgreSQL; idempotency + restart + out-of-order + isolation",
+   "commit": "cdd6c56"
   },
   {
    "item": 126,
    "id": "SCHED-008",
    "title": "Endpoint transport-error backoff",
    "phase": "Phase E10 \u2014 Scheduling and drift",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "internal/history \u2014 state + transitions, one transaction",
+   "tests": "internal/history tests",
+   "evidence": "9 tests vs real PostgreSQL; idempotency + restart + out-of-order + isolation",
+   "commit": "cdd6c56"
   },
   {
    "item": 127,
    "id": "DRIFT-001",
    "title": "drift_events table (migration 007 already applied)",
    "phase": "Phase E10 \u2014 Scheduling and drift",
-   "status": "NOT_STARTED",
-   "implementation": "",
-   "tests": "",
-   "evidence": "",
-   "commit": ""
+   "status": "VERIFIED",
+   "implementation": "internal/history \u2014 state + transitions, one transaction",
+   "tests": "internal/history tests",
+   "evidence": "9 tests vs real PostgreSQL; idempotency + restart + out-of-order + isolation",
+   "commit": "cdd6c56"
   },
   {
    "item": 128,
@@ -1878,7 +1878,7 @@
    "implementation": "",
    "tests": "",
    "evidence": "SOC 2 Type II observation window \u2014 months, needs an auditor",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 174,
@@ -1900,7 +1900,7 @@
    "implementation": "",
    "tests": "",
    "evidence": "first paying customer, signed contract >= $9,000",
-   "commit": "0a0b53c"
+   "commit": "cdd6c56"
   },
   {
    "item": 176,
@@ -1921,8 +1921,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 26,
@@ -1932,8 +1932,8 @@
    "status": "VERIFIED",
    "implementation": "shipped in pkg/ and cmd/",
    "tests": "go test ./... green",
-   "evidence": "make check: pass; 15 packages ok",
-   "commit": "0a0b53c"
+   "evidence": "make check: pass; 17 packages ok",
+   "commit": "cdd6c56"
   },
   {
    "item": 108,
