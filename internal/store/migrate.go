@@ -152,17 +152,25 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) (applied []int, err error)
 // Both answer a question that precedes tenancy, so they cannot be scoped to a
 // tenant: the tenant is the thing being determined.
 //
-//	session_index  which tenant does this session cookie belong to?
-//	oidc_flows     which login is this provider callback for?
+//	session_index           which tenant does this session cookie belong to?
+//	oidc_flows              which login is this provider callback for?
+//	provider_domain_index   which tenant does this email domain belong to?
 //
-// Both hold only the mapping. No certificate, no endpoint, no user row. Both
-// are keyed by a value with 256 bits of entropy, so neither can be enumerated.
+// Each holds only the mapping. No certificate, no endpoint, no user row, and
+// no secret — provider_domain_index carries client_id, which OAuth puts in the
+// user's own address bar, while the client SECRET stays in the policied
+// identity_providers table.
+//
+// session_index and oidc_flows are keyed by 256 bits of entropy and cannot be
+// enumerated. provider_domain_index is keyed by an email domain, which IS
+// guessable — so every lookup against it returns one indistinguishable error
+// for "unknown" and "disabled", and that property has its own test.
 //
 // This list is asserted to its exact length by a test, the same way
 // internal/tools/importcheck bounds its exception list: growing it is a
 // reviewable diff where somebody has to argue for the new entry, not a quiet
 // addition.
-var PreTenancyTables = []string{"session_index", "oidc_flows"}
+var PreTenancyTables = []string{"session_index", "oidc_flows", "provider_domain_index"}
 
 // UnpoliciedTenantTables is TENANT-004, build item 097 — the sweep.
 //

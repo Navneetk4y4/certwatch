@@ -383,7 +383,7 @@ func TestTableOwnerIsAlsoSubjectToThePolicy(t *testing.T) {
 // un-policied table, this fails and they have to justify it in a diff rather
 // than add it quietly.
 func TestPreTenancyExemptionListStaysSmall(t *testing.T) {
-	want := []string{"session_index", "oidc_flows"}
+	want := []string{"session_index", "oidc_flows", "provider_domain_index"}
 	if len(PreTenancyTables) != len(want) {
 		t.Fatalf("PreTenancyTables has %d entries, want exactly %d (%v).\n"+
 			"Every entry is a table with a tenant_id and NO row-level security. "+
@@ -408,6 +408,9 @@ func TestExemptTablesHoldOnlyTheirMapping(t *testing.T) {
 		"oidc_flows": {"state": true, "nonce": true, "code_verifier": true,
 			"redirect_uri": true, "issuer": true, "created_at": true,
 			"expires_at": true, "consumed_at": true},
+		// Routing only. If a secret column ever appears here, this fails.
+		"provider_domain_index": {"email_domain": true, "tenant_id": true,
+			"issuer": true, "client_id": true, "enabled": true},
 	}
 	for tbl, cols := range allowed {
 		rows, err := mig.Query(context.Background(), `
