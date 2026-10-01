@@ -157,6 +157,15 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) (applied []int, err error)
 //	provider_domain_index   which tenant does this email domain belong to?
 //	tenant_registry         which tenants exist, for a worker that serves all
 //	                        of them? One opaque id per row and nothing else.
+//	collector_cert_index    which tenant does this mTLS client certificate
+//	                        belong to, and may it be used at all?
+//	enrollment_token_index  which tenant does this enrolment token belong to,
+//	                        and is it spent or expired?
+//
+// SIX is a lot, and they are all the same shape: a hashed or opaque key, a
+// tenant id, and just enough to refuse early. The repetition is a signal that
+// one pre_tenancy_lookup table with a typed accessor per kind would be better
+// than six. Noted in migration 008; it should not reach seven without doing it.
 //
 // Each holds only the mapping. No certificate, no endpoint, no user row, and
 // no secret — provider_domain_index carries client_id, which OAuth puts in the
@@ -174,6 +183,7 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) (applied []int, err error)
 // addition.
 var PreTenancyTables = []string{
 	"session_index", "oidc_flows", "provider_domain_index", "tenant_registry",
+	"collector_cert_index", "enrollment_token_index",
 }
 
 // UnpoliciedTenantTables is TENANT-004, build item 097 — the sweep.

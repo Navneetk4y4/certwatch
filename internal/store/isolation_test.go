@@ -397,7 +397,8 @@ func TestTableOwnerIsAlsoSubjectToThePolicy(t *testing.T) {
 // un-policied table, this fails and they have to justify it in a diff rather
 // than add it quietly.
 func TestPreTenancyExemptionListStaysSmall(t *testing.T) {
-	want := []string{"session_index", "oidc_flows", "provider_domain_index", "tenant_registry"}
+	want := []string{"session_index", "oidc_flows", "provider_domain_index",
+		"tenant_registry", "collector_cert_index", "enrollment_token_index"}
 	if len(PreTenancyTables) != len(want) {
 		t.Fatalf("PreTenancyTables has %d entries, want exactly %d (%v).\n"+
 			"Every entry is a table with a tenant_id and NO row-level security. "+
@@ -428,6 +429,14 @@ func TestExemptTablesHoldOnlyTheirMapping(t *testing.T) {
 		// One opaque id and a flag. If a name, plan or domain ever appears
 		// here, an un-policied table has started describing customers.
 		"tenant_registry": {"tenant_id": true, "active": true},
+		// Identity routing plus the two facts needed to REFUSE a certificate
+		// before any tenant-scoped code runs. No key, no certificate body.
+		"collector_cert_index": {"fingerprint": true, "tenant_id": true,
+			"collector_id": true, "not_after": true, "revoked": true},
+		// Hash, tenant, and the two facts needed to refuse early. No creator,
+		// no collector, and never the token itself.
+		"enrollment_token_index": {"token_hash": true, "tenant_id": true,
+			"expires_at": true, "used": true},
 	}
 	for tbl, cols := range allowed {
 		rows, err := mig.Query(context.Background(), `

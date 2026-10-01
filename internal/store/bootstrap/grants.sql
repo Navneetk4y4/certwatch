@@ -22,4 +22,6 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
 REVOKE TRUNCATE ON ALL TABLES IN SCHEMA public FROM certwatch_app;
 GRANT EXECUTE ON FUNCTION sync_provider_domain_index() TO certwatch_app;
 GRANT EXECUTE ON FUNCTION sync_tenant_registry() TO certwatch_app;
+GRANT EXECUTE ON FUNCTION sync_collector_cert_index() TO certwatch_app;
+GRANT EXECUTE ON FUNCTION sync_enrollment_token_index() TO certwatch_app;
 REVOKE CREATE ON SCHEMA public FROM certwatch_app;

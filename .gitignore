@@ -17,3 +17,6 @@ coverage.out
 
 # macOS
 .DS_Store
+
+# Soak evidence is a generated artifact of a 24h run, not source.
+/test/lab/soak/evidence/
