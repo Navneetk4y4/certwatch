@@ -144,6 +144,33 @@ def probe():
         ev[i] = ("VERIFIED", "internal/history — state + transitions, one transaction",
                  "internal/history tests", e12)
 
+    # E10 enrolment + ingestion.
+    e10 = ("29 tests vs real PostgreSQL and a real TLS 1.3 connection; "
+           "mutations 7/7 caught")
+    for i, what in [(103, "CA, clientAuth-only issuance, narrow Sign/Bundle"),
+                    (104, "token: hashed, single-use, 24h, audited; 409 vs 401"),
+                    (105, "CSR validation: proof of possession, key strength"),
+                    (106, "rotation at 50% life; immediate revocation"),
+                    (107, "mTLS, TLS 1.3 min, CA pinning, no session tickets"),
+                    (108, "schema-closed decoder"),
+                    (109, "tenant cross-check vs client cert; 403 + audit"),
+                    (110, "INV-5 server-side private-key rejection"),
+                    (111, "idempotency by batch_id"),
+                    (112, "upsert pipeline"),
+                    (114, "caps: 1000 obs / 5MB / 20MB; gzip bomb bounded")]:
+        ev[i] = ("VERIFIED", what, "internal/ingest + internal/enroll", e10)
+    ev[113] = ("IMPLEMENTED", "endpoints upserted on ingest",
+               "covered indirectly", "proposal/dedup/monitored flags not built")
+    for i in (115, 116, 117, 118, 119):
+        ev[i] = ("NOT_STARTED", "", "", "collector-side protocol: long-poll, spool, JWS")
+
+    # E13 alerting.
+    e13 = ("14 tests vs real PostgreSQL; mutations 3/4 caught, 4th a measured "
+           "equivalence (endpoint_state row lock serializes folds)")
+    for i in range(128, 142):
+        ev[i] = ("VERIFIED", "internal/alert — outbox, dedupe, cooldown, retry",
+                 "internal/alert tests", e13)
+
     ev[89] = ("IN_PROGRESS", "test/lab/soak/run.sh", "running",
               "24h unattended run STARTED 2026-09-30T17:17Z; must not be VERIFIED early")
     # Items that are not engineering at all.
