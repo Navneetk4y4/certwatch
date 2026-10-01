@@ -36,10 +36,21 @@ import (
 	"github.com/certwatch/certwatch/pkg/verify"
 )
 
+// EventSink receives the events a fold produced, inside the SAME transaction.
+//
+// internal/alert implements this. Keeping it an interface means history does
+// not import alert, so the dependency runs one way and a test can observe
+// events without an alert pipeline.
+type EventSink interface {
+	RecordEvents(ctx context.Context, tx *store.Tx, endpointID string,
+		events []state.Event) (int, error)
+}
+
 // Recorder folds verification results into durable state.
 type Recorder struct {
 	st         *store.Store
 	thresholds state.Thresholds
+	sink       EventSink
 }
 
 // New builds a Recorder.
@@ -48,6 +59,16 @@ func New(st *store.Store, th state.Thresholds) *Recorder {
 		th = state.DefaultThresholds()
 	}
 	return &Recorder{st: st, thresholds: th}
+}
+
+// WithSink attaches an event sink — in production, the alert pipeline.
+//
+// It runs inside the fold's transaction on purpose: an alert that exists
+// without the state change that caused it, or a state change whose alert was
+// lost, are both worse than either succeeding or both failing.
+func (r *Recorder) WithSink(s EventSink) *Recorder {
+	r.sink = s
+	return r
 }
 
 // Outcome is what one recorded observation produced.
@@ -147,6 +168,11 @@ func (r *Recorder) Record(ctx context.Context, endpointID string,
 				string(e.Severity), e.Summary, e.Observations, e.DedupeKey,
 				e.At.UTC()); err != nil {
 				return fmt.Errorf("history: recording event: %w", err)
+			}
+		}
+		if r.sink != nil && len(events) > 0 {
+			if _, err := r.sink.RecordEvents(ctx, tx, endpointID, events); err != nil {
+				return fmt.Errorf("history: alerting: %w", err)
 			}
 		}
 		return nil
