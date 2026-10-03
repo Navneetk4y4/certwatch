@@ -1,0 +1,20 @@
+# sqlc — build item 096 (SCHEMA-013).
+#
+# The schema IS the migrations: sqlc type-checks every query against exactly
+# the DDL production runs, so a query referring to a column that a migration
+# renamed fails `make sqlc-check` rather than failing at runtime.
+#
+#   make sqlc        regenerate internal/store/db
+#   make sqlc-check  fail if the committed generated code is stale
+version: "2"
+sql:
+  - engine: postgresql
+    schema: internal/store/migrations
+    queries: internal/store/queries
+    gen:
+      go:
+        package: db
+        out: internal/store/db
+        sql_package: pgx/v5
+        emit_interface: true
+        emit_empty_slices: true

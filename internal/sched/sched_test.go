@@ -509,3 +509,26 @@ func TestEnqueueDistinguishesDuplicateFromRealFailure(t *testing.T) {
 			"The caller would treat dropped work as successful deduplication.", err)
 	}
 }
+
+// Regression: NULLIF($n,”)::uuid made pgx infer the parameter as uuid and
+// reject "" BEFORE NULLIF ran. It broke twice by hand. EnqueueJob is now
+// generated with the parameter typed as text, and this pins that an enqueue
+// with NO endpoint (a discovery job) stores NULL rather than failing.
+func TestEnqueueWithNoEndpointStoresNullNotAnError(t *testing.T) {
+	f := newFx(t)
+	q := f.queue("w1")
+	id, err := q.Enqueue(f.ctxA(), KindDiscover, "", "discover-window-1", f.clock)
+	if err != nil {
+		t.Fatalf("enqueue with an empty endpoint id failed: %v", err)
+	}
+	var isNull bool
+	if err := f.st.InTenantTx(f.ctxA(), func(ctx context.Context, tx *store.Tx) error {
+		return tx.Conn().QueryRow(ctx,
+			`SELECT endpoint_id IS NULL FROM jobs WHERE id = $1::uuid`, id).Scan(&isNull)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if !isNull {
+		t.Error("an empty endpoint id was stored as something other than NULL")
+	}
+}

@@ -131,7 +131,7 @@ deps: ## List the dependency tree and the recorded justification
 	@$(GO) list -m all
 	@echo; echo "Justification for every non-stdlib dependency: docs/dependencies.md"
 
-check: fmt vet importcheck deps-check test-race canary ## Everything CI runs
+check: fmt vet importcheck deps-check sqlc-check test-race canary ## Everything CI runs
 	@echo
 	@echo "check: ALL GATES PASSED"
 
@@ -199,3 +199,14 @@ db-down: ## Drop the dev database and roles
 
 db-psql: ## psql as the APP role, so you see what the application sees
 	@psql "postgres://certwatch_app:certwatch_dev_password_not_for_production@localhost:5432/certwatch"
+
+# ---- sqlc (item 096) --------------------------------------------------------
+.PHONY: sqlc sqlc-check
+sqlc: ## Regenerate internal/store/db from internal/store/queries
+	@sqlc generate
+
+sqlc-check: ## Fail if the committed generated code is stale or the queries do not type-check
+	@command -v sqlc >/dev/null 2>&1 || { echo "sqlc-check: sqlc is not installed (brew install sqlc). This gate does not skip."; exit 1; }
+	@sqlc vet
+	@sqlc diff || { echo "sqlc-check: internal/store/db is stale. Run: make sqlc"; exit 1; }
+	@echo "sqlc-check: generated code matches queries and migrations"

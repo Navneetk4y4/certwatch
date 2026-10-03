@@ -29,8 +29,10 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/certwatch/certwatch/internal/store"
+	"github.com/certwatch/certwatch/internal/store/db"
 	"github.com/certwatch/certwatch/internal/tenancy"
 	"github.com/certwatch/certwatch/pkg/state"
 	"github.com/certwatch/certwatch/pkg/verify"
@@ -309,28 +311,24 @@ func (r *Recorder) TransitionsFor(ctx context.Context, endpointID string, limit 
 	}
 	var out []Transition
 	err := r.st.InTenantTx(ctx, func(ctx context.Context, tx *store.Tx) error {
-		rows, err := tx.Conn().Query(ctx, `
-			SELECT at, kind, COALESCE(to_status::text,''), COALESCE(outcome::text,''),
-			       COALESCE(sub_reason,''), COALESCE(previous_sub_reason,''),
-			       severity::text, COALESCE(summary,''), observations
-			  FROM drift_events
-			 WHERE endpoint_id = $1::uuid
-			 ORDER BY at DESC, id DESC
-			 LIMIT $2`, endpointID, limit)
+		var u pgtype.UUID
+		if err := u.Scan(endpointID); err != nil {
+			return nil // not a uuid: there is nothing to show, not an error
+		}
+		rows, err := db.New(tx.Conn()).TransitionsForEndpoint(ctx,
+			db.TransitionsForEndpointParams{EndpointID: u, Lim: int32(limit)})
 		if err != nil {
 			return err
 		}
-		defer rows.Close()
-		for rows.Next() {
-			var t Transition
-			if err := rows.Scan(&t.At, &t.Kind, &t.ToStatus, &t.Outcome,
-				&t.SubReason, &t.PreviousSubReason, &t.Severity,
-				&t.Summary, &t.Observations); err != nil {
-				return err
-			}
-			out = append(out, t)
+		for _, row := range rows {
+			out = append(out, Transition{
+				At: row.At.Time, Kind: row.Kind, ToStatus: row.ToStatus,
+				Outcome: row.Outcome, SubReason: row.SubReason,
+				PreviousSubReason: row.PreviousSubReason, Severity: row.Severity,
+				Summary: row.Summary, Observations: int(row.Observations),
+			})
 		}
-		return rows.Err()
+		return nil
 	})
 	return out, err
 }
@@ -342,26 +340,13 @@ func (r *Recorder) Due(ctx context.Context, now time.Time, limit int) ([]string,
 	}
 	var out []string
 	err := r.st.InTenantTx(ctx, func(ctx context.Context, tx *store.Tx) error {
-		rows, err := tx.Conn().Query(ctx, `
-			SELECT e.id::text
-			  FROM endpoints e
-			  LEFT JOIN endpoint_state s ON s.endpoint_id = e.id
-			 WHERE e.disabled_at IS NULL
-			   AND (s.next_check_at IS NULL OR s.next_check_at <= $1)
-			 ORDER BY COALESCE(s.next_check_at, 'epoch'::timestamptz)
-			 LIMIT $2`, now.UTC(), limit)
+		ids, err := db.New(tx.Conn()).DueEndpoints(ctx, db.DueEndpointsParams{
+			Now: pgtype.Timestamptz{Time: now.UTC(), Valid: true}, Lim: int32(limit)})
 		if err != nil {
 			return err
 		}
-		defer rows.Close()
-		for rows.Next() {
-			var id string
-			if err := rows.Scan(&id); err != nil {
-				return err
-			}
-			out = append(out, id)
-		}
-		return rows.Err()
+		out = append(out, ids...)
+		return nil
 	})
 	return out, err
 }

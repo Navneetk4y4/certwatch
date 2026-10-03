@@ -7,6 +7,9 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
+
+	"github.com/certwatch/certwatch/internal/store/db"
 
 	"github.com/certwatch/certwatch/internal/tenancy"
 )
@@ -44,12 +47,11 @@ type SessionRoute struct {
 func (s *Store) LookupSession(ctx context.Context, tokenHash []byte) (SessionRoute, error) {
 	var r SessionRoute
 	var tid, sid string
-	err := s.pool.QueryRow(ctx,
-		`SELECT o_tenant::text, o_session::text FROM ptl_session($1)`, tokenHash).
-		Scan(&tid, &sid)
+	row, err := db.New(s.pool).PtlSession(ctx, tokenHash)
 	if err != nil {
 		return r, routeErr(err)
 	}
+	tid, sid = row.Tenant, row.SessionID
 	r.Tenant, r.SessionID = tenancy.Tenant(tid), sid
 	if !r.Tenant.Valid() {
 		return SessionRoute{}, ErrNoRoute
@@ -69,12 +71,11 @@ type DomainRoute struct {
 func (s *Store) LookupEmailDomain(ctx context.Context, domain string) (DomainRoute, error) {
 	var r DomainRoute
 	var tid string
-	err := s.pool.QueryRow(ctx,
-		`SELECT o_tenant::text, o_issuer, o_client FROM ptl_email_domain($1)`, domain).
-		Scan(&tid, &r.Issuer, &r.ClientID)
+	row, err := db.New(s.pool).PtlEmailDomain(ctx, domain)
 	if err != nil {
 		return DomainRoute{}, routeErr(err)
 	}
+	tid, r.Issuer, r.ClientID = row.Tenant, row.Issuer, row.ClientID
 	r.Tenant = tenancy.Tenant(tid)
 	if !r.Tenant.Valid() {
 		return DomainRoute{}, ErrNoRoute
@@ -94,13 +95,12 @@ type CollectorRoute struct {
 func (s *Store) LookupCollectorCert(ctx context.Context, fingerprint string) (CollectorRoute, error) {
 	var r CollectorRoute
 	var tid string
-	err := s.pool.QueryRow(ctx,
-		`SELECT o_tenant::text, o_collector::text, o_expires, o_revoked
-		   FROM ptl_collector_cert($1)`, fingerprint).
-		Scan(&tid, &r.CollectorID, &r.ExpiresAt, &r.Revoked)
+	row, err := db.New(s.pool).PtlCollectorCert(ctx, fingerprint)
 	if err != nil {
 		return CollectorRoute{}, routeErr(err)
 	}
+	tid, r.CollectorID, r.Revoked = row.Tenant, row.CollectorID, row.Revoked
+	r.ExpiresAt = row.ExpiresAt.Time
 	r.Tenant = tenancy.Tenant(tid)
 	if !r.Tenant.Valid() {
 		return CollectorRoute{}, ErrNoRoute
@@ -119,12 +119,12 @@ type TokenRoute struct {
 func (s *Store) LookupEnrollmentToken(ctx context.Context, tokenHash []byte) (TokenRoute, error) {
 	var r TokenRoute
 	var tid string
-	err := s.pool.QueryRow(ctx,
-		`SELECT o_tenant::text, o_expires, o_used FROM ptl_enrollment_token($1)`, tokenHash).
-		Scan(&tid, &r.ExpiresAt, &r.Used)
+	row, err := db.New(s.pool).PtlEnrollmentToken(ctx, tokenHash)
 	if err != nil {
 		return TokenRoute{}, routeErr(err)
 	}
+	tid, r.Used = row.Tenant, row.Used
+	r.ExpiresAt = row.ExpiresAt.Time
 	r.Tenant = tenancy.Tenant(tid)
 	if !r.Tenant.Valid() {
 		return TokenRoute{}, ErrNoRoute
@@ -135,20 +135,15 @@ func (s *Store) LookupEnrollmentToken(ctx context.Context, tokenHash []byte) (To
 // ActiveTenants lists opaque tenant ids, for a worker that serves every
 // tenant. It is the only enumeration the pre-tenancy layer offers.
 func (s *Store) ActiveTenants(ctx context.Context) ([]tenancy.Tenant, error) {
-	rows, err := s.pool.Query(ctx, `SELECT id::text FROM ptl_active_tenants() AS id`)
+	ids, err := db.New(s.pool).PtlActiveTenants(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	var out []tenancy.Tenant
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
+	out := make([]tenancy.Tenant, 0, len(ids))
+	for _, id := range ids {
 		out = append(out, tenancy.Tenant(id))
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
 // OIDCFlow is an in-flight login.
@@ -170,10 +165,12 @@ type OIDCFlow struct {
 
 // CreateOIDCFlow records a login in flight.
 func (s *Store) CreateOIDCFlow(ctx context.Context, f OIDCFlow) error {
-	_, err := s.pool.Exec(ctx,
-		`SELECT ptl_create_oidc_flow($1,$2,$3,$4,$5,$6,$7,$8)`,
-		f.State, f.Nonce, f.CodeVerifier, f.RedirectURI, f.Issuer, f.ClientID,
-		f.EmailDomain, f.ExpiresAt.UTC())
+	err := db.New(s.pool).PtlCreateOIDCFlow(ctx, db.PtlCreateOIDCFlowParams{
+		State: f.State, Nonce: f.Nonce, CodeVerifier: f.CodeVerifier,
+		RedirectUri: f.RedirectURI, Issuer: f.Issuer, ClientID: f.ClientID,
+		EmailDomain: f.EmailDomain,
+		ExpiresAt:   pgtype.Timestamptz{Time: f.ExpiresAt.UTC(), Valid: true},
+	})
 	if err != nil {
 		return fmt.Errorf("store: recording login state: %w", err)
 	}
@@ -184,16 +181,15 @@ func (s *Store) CreateOIDCFlow(ctx context.Context, f OIDCFlow) error {
 // for the same state returns ErrNoRoute whether or not the first has
 // committed, so a replayed callback cannot complete.
 func (s *Store) ConsumeOIDCFlow(ctx context.Context, state string) (OIDCFlow, error) {
-	f := OIDCFlow{State: state}
-	err := s.pool.QueryRow(ctx, `
-		SELECT o_nonce, o_verifier, o_redirect, o_issuer, o_client, o_domain, o_expires
-		  FROM ptl_consume_oidc_flow($1)`, state).
-		Scan(&f.Nonce, &f.CodeVerifier, &f.RedirectURI, &f.Issuer, &f.ClientID,
-			&f.EmailDomain, &f.ExpiresAt)
+	row, err := db.New(s.pool).PtlConsumeOIDCFlow(ctx, state)
 	if err != nil {
 		return OIDCFlow{}, routeErr(err)
 	}
-	return f, nil
+	return OIDCFlow{
+		State: state, Nonce: row.Nonce, CodeVerifier: row.CodeVerifier,
+		RedirectURI: row.RedirectUri, Issuer: row.Issuer, ClientID: row.ClientID,
+		EmailDomain: row.EmailDomain, ExpiresAt: row.ExpiresAt.Time,
+	}, nil
 }
 
 func routeErr(err error) error {
