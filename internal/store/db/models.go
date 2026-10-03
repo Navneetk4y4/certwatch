@@ -526,6 +526,13 @@ type Collector struct {
 	LastSeenAt            pgtype.Timestamptz
 	CreatedAt             pgtype.Timestamptz
 	RevokedAt             pgtype.Timestamptz
+	LastHeartbeatAt       pgtype.Timestamptz
+	ProtocolVersion       pgtype.Int4
+	SpoolBytes            pgtype.Int8
+	SpoolPctFull          pgtype.Float4
+	TasksCompleted        pgtype.Int8
+	TasksFailed           pgtype.Int8
+	LastError             pgtype.Text
 }
 
 type CollectorCertificate struct {
@@ -675,6 +682,13 @@ type JobRun struct {
 	Detail     pgtype.Text
 	StartedAt  pgtype.Timestamptz
 	FinishedAt pgtype.Timestamptz
+}
+
+type Mode2Nonce struct {
+	TenantID    pgtype.UUID
+	CollectorID pgtype.UUID
+	Nonce       string
+	ExpiresAt   pgtype.Timestamptz
 }
 
 type Observation struct {

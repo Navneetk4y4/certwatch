@@ -19,6 +19,7 @@
 package ingest
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"encoding/json"
@@ -31,6 +32,7 @@ import (
 	"time"
 
 	"github.com/certwatch/certwatch/internal/enroll"
+	"github.com/certwatch/certwatch/internal/sched"
 	"github.com/certwatch/certwatch/internal/store"
 	"github.com/certwatch/certwatch/internal/tenancy"
 	"github.com/certwatch/certwatch/pkg/safelog"
@@ -50,13 +52,6 @@ const (
 	MaxBatchIDLen = 128
 )
 
-// Protocol version. PROTO-008: an unknown version is refused with an upgrade
-// hint rather than guessed at.
-const (
-	ProtocolVersion       = "1"
-	ProtocolVersionHeader = "X-Certwatch-Protocol"
-)
-
 var (
 	ErrUnknownField   = errors.New("ingest: payload contains an unknown field")
 	ErrTooLarge       = errors.New("ingest: payload exceeds the size cap")
@@ -67,12 +62,16 @@ var (
 
 // Batch is the wire payload. Every field is explicit; the decoder is closed.
 type Batch struct {
-	BatchID      string        `json:"batch_id"`
-	TenantID     string        `json:"tenant_id"`
-	CollectorID  string        `json:"collector_id"`
-	StartedAt    time.Time     `json:"started_at"`
-	FinishedAt   time.Time     `json:"finished_at"`
-	ScopeDigest  string        `json:"scope_digest,omitempty"`
+	BatchID     string    `json:"batch_id"`
+	TenantID    string    `json:"tenant_id"`
+	CollectorID string    `json:"collector_id"`
+	StartedAt   time.Time `json:"started_at"`
+	FinishedAt  time.Time `json:"finished_at"`
+	ScopeDigest string    `json:"scope_digest,omitempty"`
+	// TaskID names the task these results answer, if any. Accepted by the
+	// server BEFORE any collector sends it: the decoder is schema-closed, so
+	// a collector that shipped the field first would have every batch refused.
+	TaskID       string        `json:"task_id,omitempty"`
 	Observations []Observation `json:"observations"`
 }
 
@@ -140,27 +139,38 @@ type Decoder struct{ log *safelog.Logger }
 //  4. decode with unknown fields disallowed
 //  5. bound the observation count
 func (d *Decoder) Decode(r io.Reader, gzipped bool) (Batch, error) {
-	var b Batch
+	raw, err := d.ReadBody(r, gzipped)
+	if err != nil {
+		return Batch{}, err
+	}
+	return DecodeBatch(raw)
+}
+
+// ReadBody is steps 1-3: the bytes of a request, bounded and scanned, before
+// anything parses them. Every collector request body goes through this —
+// including heartbeats — because INV-5 is about bytes on the wire, not about
+// which endpoint they were sent to.
+func (d *Decoder) ReadBody(r io.Reader, gzipped bool) ([]byte, error) {
 	limited := io.LimitReader(r, MaxCompressedBytes+1)
 	var src io.Reader = limited
 	if gzipped {
 		zr, err := gzip.NewReader(limited)
 		if err != nil {
-			return b, fmt.Errorf("ingest: gzip: %w", err)
+			return nil, fmt.Errorf("ingest: gzip: %w", err)
 		}
 		defer zr.Close()
 		src = io.LimitReader(zr, MaxDecompressedBytes+1)
 	}
 	raw, err := io.ReadAll(src)
 	if err != nil {
-		return b, fmt.Errorf("ingest: reading payload: %w", err)
+		return nil, fmt.Errorf("ingest: reading payload: %w", err)
 	}
 	if gzipped && len(raw) > MaxDecompressedBytes {
-		return b, fmt.Errorf("%w: decompressed payload exceeds %d bytes",
+		return nil, fmt.Errorf("%w: decompressed payload exceeds %d bytes",
 			ErrTooLarge, MaxDecompressedBytes)
 	}
 	if !gzipped && len(raw) > MaxCompressedBytes {
-		return b, fmt.Errorf("%w: payload exceeds %d bytes", ErrTooLarge, MaxCompressedBytes)
+		return nil, fmt.Errorf("%w: payload exceeds %d bytes", ErrTooLarge, MaxCompressedBytes)
 	}
 
 	// INV-5, before parsing. Nothing is stored, logged or decoded until this
@@ -172,21 +182,37 @@ func (d *Decoder) Decode(r io.Reader, gzipped bool) (Batch, error) {
 			d.log.Error("ingest rejected: private-key material in payload",
 				safelog.Str("pattern", pat))
 		}
-		return b, ErrKeyMaterial
+		return nil, ErrKeyMaterial
 	}
+	return raw, nil
+}
 
-	dec := json.NewDecoder(strings.NewReader(string(raw)))
+// decodeClosed decodes exactly one JSON value into v with unknown fields
+// refused.
+func decodeClosed(raw []byte, v any) error {
+	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
-	if err := dec.Decode(&b); err != nil {
+	if err := dec.Decode(v); err != nil {
 		if strings.Contains(err.Error(), "unknown field") {
-			return b, fmt.Errorf("%w: %v", ErrUnknownField, err)
+			return fmt.Errorf("%w: %v", ErrUnknownField, err)
 		}
-		return b, fmt.Errorf("ingest: decoding: %w", err)
+		return fmt.Errorf("ingest: decoding: %w", err)
 	}
 	// Exactly one JSON value. Trailing content is a smuggling attempt or a
 	// broken encoder; either way it is not something to silently ignore.
 	if dec.More() {
-		return b, errors.New("ingest: payload contains more than one JSON value")
+		return errors.New("ingest: payload contains more than one JSON value")
+	}
+	return nil
+}
+
+var taskIDRE = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+
+// DecodeBatch is steps 4-5 over bytes ReadBody has already passed.
+func DecodeBatch(raw []byte) (Batch, error) {
+	var b Batch
+	if err := decodeClosed(raw, &b); err != nil {
+		return b, err
 	}
 	if len(b.Observations) > MaxObservations {
 		return b, fmt.Errorf("%w: %d observations, maximum is %d",
@@ -194,6 +220,9 @@ func (d *Decoder) Decode(r io.Reader, gzipped bool) (Batch, error) {
 	}
 	if len(b.BatchID) < 8 || len(b.BatchID) > MaxBatchIDLen {
 		return b, errors.New("ingest: batch_id must be 8-128 characters")
+	}
+	if b.TaskID != "" && !taskIDRE.MatchString(b.TaskID) {
+		return b, errors.New("ingest: task_id is not a task id")
 	}
 	return b, nil
 }
@@ -204,6 +233,10 @@ type Service struct {
 	log *safelog.Logger
 	now func() time.Time
 	dec *Decoder
+
+	// Tasks, when set, lets a batch that names a task complete it in the
+	// same transaction that stores its results.
+	Tasks *sched.Queue
 
 	// RejectedKeyMaterial counts INV-5 rejections. Exposed so the canary and
 	// the metrics endpoint can both assert on it.
@@ -224,11 +257,24 @@ func NewService(st *store.Store, log *safelog.Logger, now func() time.Time) *Ser
 // The tenant_id in the payload is checked AGAINST it and never used instead —
 // item 109. A collector that names another tenant gets 403 and an audit event.
 func (s *Service) Accept(ctx context.Context, id enroll.Identity, b Batch) (accepted int, duplicate bool, err error) {
+	r, err := s.AcceptBatch(ctx, id, b)
+	return r.Accepted, r.Duplicate, err
+}
+
+// Result is what one accepted batch did.
+type Result struct {
+	Accepted      int
+	Duplicate     bool
+	TaskCompleted bool
+}
+
+// AcceptBatch is Accept with the full result.
+func (s *Service) AcceptBatch(ctx context.Context, id enroll.Identity, b Batch) (res Result, err error) {
 	if b.TenantID != "" && b.TenantID != id.TenantID.String() {
 		// Audited, because a collector claiming another tenant is either a
 		// serious bug or an attack and somebody must be able to see it later.
 		_ = s.auditMismatch(ctx, id, b.TenantID)
-		return 0, false, ErrTenantMismatch
+		return res, ErrTenantMismatch
 	}
 	tctx := tenancy.WithTenant(ctx, id.TenantID)
 
@@ -245,7 +291,9 @@ func (s *Service) Accept(ctx context.Context, id enroll.Identity, b Batch) (acce
 			return err
 		}
 		if tag.RowsAffected() == 0 {
-			duplicate = true
+			// A replay completes nothing either: the first delivery already
+			// did, or legitimately did not.
+			res.Duplicate = true
 			return nil
 		}
 
@@ -300,14 +348,19 @@ func (s *Service) Accept(ctx context.Context, id enroll.Identity, b Batch) (acce
 				nullTimeOr(o.ObservedAt, s.now().UTC())); err != nil {
 				return err
 			}
-			accepted++
+			res.Accepted++
+		}
+		if b.TaskID != "" && s.Tasks != nil {
+			if res.TaskCompleted, err = s.Tasks.CompleteForCollector(ctx, tx, b.TaskID, id.CollectorID); err != nil {
+				return err
+			}
 		}
 		_, err = tx.Conn().Exec(ctx,
 			`UPDATE collectors SET last_seen_at = $2, scope_digest = COALESCE(NULLIF($3,''), scope_digest)
 			  WHERE id = $1::uuid`, id.CollectorID, s.now().UTC(), b.ScopeDigest)
 		return err
 	})
-	return accepted, duplicate, err
+	return res, err
 }
 
 func (s *Service) auditMismatch(ctx context.Context, id enroll.Identity, claimed string) error {
@@ -347,81 +400,6 @@ func nullTimeOr(t, fallback time.Time) time.Time {
 		return fallback
 	}
 	return t.UTC()
-}
-
-// Handler is the HTTP surface. It expects mTLS to have already happened: the
-// client certificate on the TLS connection is the identity.
-type Handler struct {
-	Svc    *Service
-	Enroll *enroll.Service
-	Log    *safelog.Logger
-}
-
-// ServeHTTP handles POST /ingest/v1/batch.
-func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		writeErr(w, http.StatusMethodNotAllowed, "method not allowed")
-		return
-	}
-	if v := r.Header.Get(ProtocolVersionHeader); v != "" && v != ProtocolVersion {
-		// PROTO-008: name the supported version rather than guessing.
-		writeJSON(w, http.StatusBadRequest, map[string]string{
-			"error": "unsupported protocol version", "supported": ProtocolVersion,
-			"upgrade": "https://certwatch.example/docs/collector-upgrade",
-		})
-		return
-	}
-	// mTLS identity. No certificate means no identity: there is no fallback
-	// to a header or a bearer token, because a fallback is the thing an
-	// attacker would use.
-	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
-		writeErr(w, http.StatusUnauthorized, "client certificate required")
-		return
-	}
-	id, err := h.Enroll.ResolveClient(r.Context(), r.TLS.PeerCertificates[0].Raw)
-	if err != nil {
-		writeErr(w, http.StatusUnauthorized, "client certificate not accepted")
-		return
-	}
-
-	b, err := h.Svc.dec.Decode(r.Body, r.Header.Get("Content-Encoding") == "gzip")
-	switch {
-	case errors.Is(err, ErrKeyMaterial):
-		h.Svc.RejectedKeyMaterial++
-		// 400 and a named reason: the collector operator must be able to find
-		// and fix the bug that sent us a key.
-		writeJSON(w, http.StatusBadRequest, map[string]string{
-			"error":  "payload contained private-key material and was rejected",
-			"reason": "ingest.rejected_key_material",
-		})
-		return
-	case errors.Is(err, ErrTooLarge):
-		writeErr(w, http.StatusRequestEntityTooLarge, "payload too large")
-		return
-	case errors.Is(err, ErrUnknownField):
-		writeErr(w, http.StatusBadRequest, "payload contains an unknown field")
-		return
-	case err != nil:
-		writeErr(w, http.StatusBadRequest, "payload could not be decoded")
-		return
-	}
-
-	accepted, dup, err := h.Svc.Accept(r.Context(), id, b)
-	switch {
-	case errors.Is(err, ErrTenantMismatch):
-		writeErr(w, http.StatusForbidden, "payload tenant does not match the client certificate")
-		return
-	case err != nil:
-		if h.Log != nil {
-			h.Log.Error("ingest failed", safelog.Err(err))
-		}
-		// Never echo the database error: it can carry schema and data.
-		writeErr(w, http.StatusInternalServerError, "could not store the batch")
-		return
-	}
-	writeJSON(w, http.StatusAccepted, map[string]any{
-		"accepted": accepted, "duplicate": dup, "batch_id": b.BatchID,
-	})
 }
 
 func writeErr(w http.ResponseWriter, code int, msg string) {

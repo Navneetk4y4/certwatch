@@ -29,6 +29,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -402,4 +403,110 @@ func pgUUID(s string) pgtype.UUID {
 	var u pgtype.UUID
 	_ = u.Scan(s)
 	return u
+}
+
+// CollectorTask is a verify job handed to a collector, with the endpoint it
+// names.
+type CollectorTask struct {
+	Job
+	Hostname    string
+	Port        int
+	SNI         string
+	LeasedUntil time.Time
+}
+
+// collectorLease is what leased_by records for a job a collector holds. The
+// prefix keeps a collector id from ever colliding with a worker id.
+func collectorLease(collectorID string) string { return "collector:" + collectorID }
+
+// ClaimForCollector leases up to n due verify jobs in the tenant in ctx to one
+// collector, oldest first.
+//
+// PROTO-003, item 115. Same SKIP LOCKED claim as Claim, but scoped to the
+// collector's own tenant (from ctx — never from the request) and recorded as
+// held BY that collector, so only that collector can complete it. A collector
+// that takes work and vanishes loses the lease at leased_until and Recover
+// hands the job out again: delivery is at-least-once, and the collector
+// de-duplicates by task id.
+func (q *Queue) ClaimForCollector(ctx context.Context, collectorID string, n int,
+	lease time.Duration) ([]CollectorTask, error) {
+	if n <= 0 {
+		return nil, nil
+	}
+	if lease <= 0 {
+		lease = q.cfg.LeaseDuration
+	}
+	now := q.now().UTC()
+	var out []CollectorTask
+	err := q.st.InTenantTx(ctx, func(ctx context.Context, tx *store.Tx) error {
+		rows, err := tx.Conn().Query(ctx, `
+			WITH claimed AS (
+			  SELECT id FROM jobs
+			   WHERE state = 'pending' AND kind = 'verify_endpoint'
+			     AND endpoint_id IS NOT NULL AND run_after <= $1
+			   ORDER BY run_after, id
+			   FOR UPDATE SKIP LOCKED
+			   LIMIT $2
+			)
+			UPDATE jobs j
+			   SET state = 'running', attempts = j.attempts + 1,
+			       leased_until = $3, leased_by = $4, started_at = $1
+			  FROM claimed c, endpoints e
+			 WHERE j.id = c.id AND e.id = j.endpoint_id
+		 RETURNING j.id::text, j.endpoint_id::text, j.attempts, j.max_attempts,
+		           j.dedupe_key, j.run_after, e.hostname, e.port, e.sni`,
+			now, n, now.Add(lease), collectorLease(collectorID))
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			t := CollectorTask{LeasedUntil: now.Add(lease)}
+			if err := rows.Scan(&t.ID, &t.EndpointID, &t.Attempts, &t.MaxAttempts,
+				&t.DedupeKey, &t.RunAfter, &t.Hostname, &t.Port, &t.SNI); err != nil {
+				return err
+			}
+			t.TenantID = tx.Tenant()
+			t.Kind, t.State = KindVerify, StateRunning
+			out = append(out, t)
+		}
+		return rows.Err()
+	})
+	// RETURNING order is not guaranteed; hand tasks out oldest first.
+	sort.SliceStable(out, func(i, j int) bool {
+		if !out[i].RunAfter.Equal(out[j].RunAfter) {
+			return out[i].RunAfter.Before(out[j].RunAfter)
+		}
+		return out[i].ID < out[j].ID
+	})
+	return out, err
+}
+
+// CompleteForCollector marks a task done INSIDE the caller's transaction —
+// the one that stored the task's results — so results and completion commit
+// or vanish together.
+//
+// Only the collector holding the lease can complete it. Another collector in
+// the same tenant naming this task id completes nothing; RLS already makes
+// another tenant's job invisible. Returns false when nothing was completed:
+// unknown id, finished already, lease lapsed and re-issued, or not ours.
+func (q *Queue) CompleteForCollector(ctx context.Context, tx *store.Tx, jobID,
+	collectorID string) (bool, error) {
+	var j Job
+	err := tx.Conn().QueryRow(ctx, `
+		UPDATE jobs SET state='done', finished_at=$3, leased_until=NULL, leased_by=NULL
+		 WHERE id = $1::uuid AND state = 'running' AND leased_by = $2
+	 RETURNING id::text, attempts`, jobID, collectorLease(collectorID), q.now().UTC()).
+		Scan(&j.ID, &j.Attempts)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	j.TenantID = tx.Tenant()
+	// The run is attributed to the collector, not to this server process.
+	q2 := *q
+	q2.cfg.WorkerID = collectorLease(collectorID)
+	return true, q2.recordRun(ctx, tx, j, "ok", "completed by collector")
 }

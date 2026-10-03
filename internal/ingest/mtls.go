@@ -32,6 +32,25 @@ func ServerTLSConfig(serverCert tls.Certificate, clientCAs *x509.CertPool) *tls.
 	}
 }
 
+// Mode2ServerTLSConfig is the listener for collectors behind a TLS-inspecting
+// proxy (PROTO-007). The proxy terminates TLS, so no client certificate can
+// arrive and none is asked for: authentication is the signature on every
+// request, checked by Mode2Auth. TLS 1.2 is permitted here and only here,
+// for proxies that cannot do 1.3 — the protocol's integrity and identity do
+// not depend on this channel.
+//
+// This must be a SEPARATE listener from the mTLS one. Serving both on one
+// listener would need VerifyClientCertIfGiven, which turns "no certificate"
+// from a handshake failure into a code path.
+func Mode2ServerTLSConfig(serverCert tls.Certificate) *tls.Config {
+	return &tls.Config{
+		Certificates:           []tls.Certificate{serverCert},
+		ClientAuth:             tls.NoClientCert,
+		MinVersion:             tls.VersionTLS12,
+		SessionTicketsDisabled: true,
+	}
+}
+
 // ClientTLSConfig builds the collector side.
 //
 // RootCAs is the PINNED control-plane CA, not the system trust store. Pinning

@@ -2,6 +2,7 @@ package enroll
 
 import (
 	"context"
+	"crypto"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
@@ -206,7 +207,13 @@ type Identity struct {
 // two facts needed to refuse early — revoked and not_after — so an expired or
 // revoked client never reaches tenant-scoped code at all.
 func (s *Service) ResolveClient(ctx context.Context, der []byte) (Identity, error) {
-	fp := Fingerprint(der)
+	return s.ResolveFingerprint(ctx, Fingerprint(der))
+}
+
+// ResolveFingerprint is ResolveClient for a caller that holds only the
+// fingerprint — Mode 2, where the certificate never crosses the wire and the
+// signature names it instead. Same route, same refusals.
+func (s *Service) ResolveFingerprint(ctx context.Context, fp string) (Identity, error) {
 	route, err := s.st.LookupCollectorCert(ctx, fp)
 	if err != nil {
 		return Identity{}, ErrTokenUnknown
@@ -219,6 +226,33 @@ func (s *Service) ResolveClient(ctx context.Context, der []byte) (Identity, erro
 	}
 	id := Identity{TenantID: route.Tenant, CollectorID: route.CollectorID, Fingerprint: fp}
 	return id, nil
+}
+
+// PublicKey returns the public key of an identity's enrolled certificate, read
+// inside the identity's own tenant. It is the key Mode 2 verifies against: the
+// key the collector proved possession of at enrolment, never one a request
+// supplies.
+func (s *Service) PublicKey(ctx context.Context, id Identity) (crypto.PublicKey, error) {
+	var certPEM string
+	tctx := tenancy.WithTenant(ctx, id.TenantID)
+	err := s.st.InTenantTx(tctx, func(ctx context.Context, tx *store.Tx) error {
+		return tx.Conn().QueryRow(ctx, `
+			SELECT certificate_pem FROM collector_certificates
+			 WHERE fingerprint = $1 AND collector_id = $2::uuid AND revoked_at IS NULL`,
+			id.Fingerprint, id.CollectorID).Scan(&certPEM)
+	})
+	if err != nil {
+		return nil, ErrTokenUnknown
+	}
+	blk, _ := pem.Decode([]byte(certPEM))
+	if blk == nil {
+		return nil, ErrTokenUnknown
+	}
+	cert, err := x509.ParseCertificate(blk.Bytes)
+	if err != nil || Fingerprint(cert.Raw) != id.Fingerprint {
+		return nil, ErrTokenUnknown
+	}
+	return cert.PublicKey, nil
 }
 
 // Revoke marks a collector certificate unusable, immediately.

@@ -28,6 +28,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/certwatch/certwatch/internal/enroll"
+	"github.com/certwatch/certwatch/internal/sched"
 	"github.com/certwatch/certwatch/internal/store"
 	"github.com/certwatch/certwatch/internal/tenancy"
 	"github.com/certwatch/certwatch/pkg/safelog"
@@ -45,6 +46,9 @@ type fx struct {
 	a, b       tenancy.Tenant
 	srv        *httptest.Server
 	serverPool *x509.CertPool
+	queue      *sched.Queue
+	api        *API
+	srvCert    tls.Certificate
 }
 
 func newFx(t *testing.T) *fx {
@@ -606,10 +610,13 @@ func (f *fx) serve(t *testing.T) {
 	for _, c := range f.ca.Bundle() {
 		clientPool.AddCert(c)
 	}
-	h := &Handler{Svc: f.svc, Enroll: f.en, Log: safelog.Discard()}
+	f.queue = sched.New(f.st, safelog.Discard(), sched.DefaultConfig("test"), func() time.Time { return f.clock })
+	f.svc.Tasks = f.queue
+	f.api = NewAPI(f.svc, f.queue, MTLSAuth{Enroll: f.en}, safelog.Discard())
+	h := f.api
 	s := httptest.NewUnstartedServer(h)
-	s.TLS = ServerTLSConfig(
-		tls.Certificate{Certificate: [][]byte{srvDER}, PrivateKey: srvKey}, clientPool)
+	f.srvCert = tls.Certificate{Certificate: [][]byte{srvDER}, PrivateKey: srvKey}
+	s.TLS = ServerTLSConfig(f.srvCert, clientPool)
 	s.StartTLS()
 	t.Cleanup(s.Close)
 	f.srv = s
@@ -621,7 +628,19 @@ func (f *fx) client(t *testing.T, certPEM []byte, key *ecdsa.PrivateKey) *http.C
 	cfg := ClientTLSConfig(
 		tls.Certificate{Certificate: [][]byte{blk.Bytes}, PrivateKey: key},
 		f.serverPool, "localhost")
-	return &http.Client{Transport: &http.Transport{TLSClientConfig: cfg}, Timeout: 10 * time.Second}
+	return &http.Client{Transport: versioned{&http.Transport{TLSClientConfig: cfg}}, Timeout: 10 * time.Second}
+}
+
+// versioned sends the protocol header every collector request must carry,
+// unless the test has set one itself.
+type versioned struct{ rt http.RoundTripper }
+
+func (v versioned) RoundTrip(r *http.Request) (*http.Response, error) {
+	if r.Header.Get(ProtocolVersionHeader) == "" {
+		r = r.Clone(r.Context())
+		r.Header.Set(ProtocolVersionHeader, "1")
+	}
+	return v.rt.RoundTrip(r)
 }
 
 func TestMTLSHappyPathOverARealConnection(t *testing.T) {
@@ -631,7 +650,7 @@ func TestMTLSHappyPathOverARealConnection(t *testing.T) {
 	c := f.client(t, res.CertificatePEM, key)
 
 	body, _ := json.Marshal(batch("batch-0001", 2))
-	resp, err := c.Post(f.srv.URL+"/ingest/v1/batch", "application/json", bytes.NewReader(body))
+	resp, err := c.Post(f.srv.URL+"/v1/ingest/observations", "application/json", bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("mTLS POST failed: %v", err)
 	}
@@ -653,7 +672,7 @@ func TestConnectionWithoutAClientCertificateIsRefused(t *testing.T) {
 	c := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{
 		RootCAs: f.serverPool, ServerName: "localhost", MinVersion: tls.VersionTLS13,
 	}}, Timeout: 5 * time.Second}
-	if _, err := c.Get(f.srv.URL + "/ingest/v1/batch"); err == nil {
+	if _, err := c.Get(f.srv.URL + "/v1/ingest/observations"); err == nil {
 		t.Fatal("a connection with no client certificate succeeded")
 	}
 }
@@ -669,7 +688,7 @@ func TestTLS12DowngradeIsRefused(t *testing.T) {
 		RootCAs:      f.serverPool, ServerName: "localhost",
 		MinVersion: tls.VersionTLS12, MaxVersion: tls.VersionTLS12,
 	}}, Timeout: 5 * time.Second}
-	if _, err := c.Get(f.srv.URL + "/ingest/v1/batch"); err == nil {
+	if _, err := c.Get(f.srv.URL + "/v1/ingest/observations"); err == nil {
 		t.Fatal("a TLS 1.2 client was accepted; MinVersion is not being enforced")
 	}
 }
@@ -695,7 +714,7 @@ func TestCertificateFromAnotherCAIsRefused(t *testing.T) {
 		Certificates: []tls.Certificate{{Certificate: [][]byte{der}, PrivateKey: key}},
 		RootCAs:      f.serverPool, ServerName: "localhost", MinVersion: tls.VersionTLS13,
 	}}, Timeout: 5 * time.Second}
-	resp, err := c.Get(f.srv.URL + "/ingest/v1/batch")
+	resp, err := c.Get(f.srv.URL + "/v1/ingest/observations")
 	if err == nil {
 		defer resp.Body.Close()
 		if resp.StatusCode < 400 {
@@ -713,7 +732,7 @@ func TestRevokedCollectorIsRefusedOverMTLS(t *testing.T) {
 	c := f.client(t, res.CertificatePEM, key)
 	body, _ := json.Marshal(batch("batch-0001", 1))
 
-	resp, err := c.Post(f.srv.URL+"/ingest/v1/batch", "application/json", bytes.NewReader(body))
+	resp, err := c.Post(f.srv.URL+"/v1/ingest/observations", "application/json", bytes.NewReader(body))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -726,7 +745,7 @@ func TestRevokedCollectorIsRefusedOverMTLS(t *testing.T) {
 		t.Fatal(err)
 	}
 	body2, _ := json.Marshal(batch("batch-0002", 1))
-	resp2, err := c.Post(f.srv.URL+"/ingest/v1/batch", "application/json", bytes.NewReader(body2))
+	resp2, err := c.Post(f.srv.URL+"/v1/ingest/observations", "application/json", bytes.NewReader(body2))
 	if err != nil {
 		return // connection-level refusal is also acceptable
 	}
@@ -745,7 +764,7 @@ func TestHandlerRejectsKeyMaterialWith400AndCounts(t *testing.T) {
 	bad := `{"batch_id":"batch-0001","observations":[],` +
 		`"scope_digest":"-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----"}`
 	before := f.svc.RejectedKeyMaterial
-	resp, err := c.Post(f.srv.URL+"/ingest/v1/batch", "application/json", strings.NewReader(bad))
+	resp, err := c.Post(f.srv.URL+"/v1/ingest/observations", "application/json", strings.NewReader(bad))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -769,7 +788,7 @@ func TestUnknownProtocolVersionIsRefusedWithAnUpgradeHint(t *testing.T) {
 	res, key := f.enrolled(t, f.a, "c")
 	c := f.client(t, res.CertificatePEM, key)
 
-	req, _ := http.NewRequest("POST", f.srv.URL+"/ingest/v1/batch", strings.NewReader("{}"))
+	req, _ := http.NewRequest("POST", f.srv.URL+"/v1/ingest/observations", strings.NewReader("{}"))
 	req.Header.Set(ProtocolVersionHeader, "99")
 	resp, err := c.Do(req)
 	if err != nil {
@@ -779,9 +798,12 @@ func TestUnknownProtocolVersionIsRefusedWithAnUpgradeHint(t *testing.T) {
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400", resp.StatusCode)
 	}
-	var out map[string]string
+	var out struct {
+		Supported  []int  `json:"supported"`
+		UpgradeURL string `json:"upgrade_url"`
+	}
 	_ = json.NewDecoder(resp.Body).Decode(&out)
-	if out["supported"] != ProtocolVersion || out["upgrade"] == "" {
+	if len(out.Supported) != 1 || out.Supported[0] != CurrentProtocol || out.UpgradeURL == "" {
 		t.Errorf("response does not name the supported version and an upgrade path: %v", out)
 	}
 }
@@ -793,7 +815,7 @@ func TestErrorsDoNotLeakInternals(t *testing.T) {
 	res, key := f.enrolled(t, f.a, "c")
 	c := f.client(t, res.CertificatePEM, key)
 
-	resp, err := c.Post(f.srv.URL+"/ingest/v1/batch", "application/json",
+	resp, err := c.Post(f.srv.URL+"/v1/ingest/observations", "application/json",
 		strings.NewReader(`{"batch_id":"batch-0001","surprise":1}`))
 	if err != nil {
 		t.Fatal(err)
