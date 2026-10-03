@@ -33,7 +33,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/certwatch/certwatch/internal/store"
 	"github.com/certwatch/certwatch/internal/tenancy"
@@ -172,29 +171,12 @@ func (q *Queue) Enqueue(ctx context.Context, kind Kind, endpointID, dedupeKey st
 // ActiveTenants lists the tenants a worker should serve.
 //
 // This is the one system-level question a background worker genuinely has to
-// ask before it can scope anything: "who exists?". tenant_registry holds one
+// ask before it can scope anything: "who exists?". The tenant kind of the
+// pre-tenancy lookup holds one
 // opaque id per row and nothing else, so answering it reveals a count and no
 // identities.
 func (q *Queue) ActiveTenants(ctx context.Context) ([]tenancy.Tenant, error) {
-	var out []tenancy.Tenant
-	err := q.st.Privileged(ctx, "enumerate tenants for a worker that serves all of them",
-		func(ctx context.Context, pool *pgxpool.Pool) error {
-			rows, err := pool.Query(ctx,
-				`SELECT tenant_id::text FROM tenant_registry WHERE active ORDER BY tenant_id`)
-			if err != nil {
-				return err
-			}
-			defer rows.Close()
-			for rows.Next() {
-				var id string
-				if err := rows.Scan(&id); err != nil {
-					return err
-				}
-				out = append(out, tenancy.Tenant(id))
-			}
-			return rows.Err()
-		})
-	return out, err
+	return q.st.ActiveTenants(ctx)
 }
 
 // Claim takes up to n due jobs, across every tenant.

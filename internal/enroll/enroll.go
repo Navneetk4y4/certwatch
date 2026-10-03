@@ -11,9 +11,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/certwatch/certwatch/internal/store"
 	"github.com/certwatch/certwatch/internal/tenancy"
 	"github.com/certwatch/certwatch/pkg/safelog"
@@ -109,36 +106,20 @@ func (s *Service) Enroll(ctx context.Context, token string, csrDER []byte,
 	// Resolve the token to its tenant, and consume it ATOMICALLY. The
 	// UPDATE ... WHERE used_at IS NULL RETURNING pattern means two concurrent
 	// redemptions cannot both succeed: exactly one gets a row.
-	var tid string
-	var expires time.Time
-	var alreadyUsed bool
-	err := s.st.Privileged(ctx,
-		"redeem an enrolment token; the token is what identifies the tenant",
-		func(ctx context.Context, pool *pgxpool.Pool) error {
-			// Look first so a replay can be distinguished from an unknown
-			// token — 409 and 401 are different answers to different
-			// situations.
-			return pool.QueryRow(ctx, `
-				SELECT tenant_id::text, expires_at, used
-				  FROM enrollment_token_index WHERE token_hash = $1`, th).
-				Scan(&tid, &expires, &alreadyUsed)
-		})
+	route, err := s.st.LookupEnrollmentToken(ctx, th)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, store.ErrNoRoute) {
 			return Result{}, ErrTokenUnknown
 		}
 		return Result{}, fmt.Errorf("enroll: reading token: %w", err)
 	}
-	if alreadyUsed {
+	if route.Used {
 		return Result{}, ErrTokenUsed
 	}
-	if s.now().UTC().After(expires) {
+	if s.now().UTC().After(route.ExpiresAt) {
 		return Result{}, ErrTokenUnknown
 	}
-	tenant := tenancy.Tenant(tid)
-	if !tenant.Valid() {
-		return Result{}, ErrTokenUnknown
-	}
+	tenant := route.Tenant
 
 	// The CN is derived by US, from the tenant, never taken from the CSR.
 	// Letting a requester choose their own CN would let one collector ask for
@@ -226,32 +207,17 @@ type Identity struct {
 // revoked client never reaches tenant-scoped code at all.
 func (s *Service) ResolveClient(ctx context.Context, der []byte) (Identity, error) {
 	fp := Fingerprint(der)
-	var id Identity
-	var tid string
-	var notAfter time.Time
-	var revoked bool
-	err := s.st.Privileged(ctx,
-		"resolve an mTLS client certificate to its tenant; the certificate is the selector",
-		func(ctx context.Context, pool *pgxpool.Pool) error {
-			return pool.QueryRow(ctx, `
-				SELECT tenant_id::text, collector_id::text, not_after, revoked
-				  FROM collector_cert_index WHERE fingerprint = $1`, fp).
-				Scan(&tid, &id.CollectorID, &notAfter, &revoked)
-		})
+	route, err := s.st.LookupCollectorCert(ctx, fp)
 	if err != nil {
 		return Identity{}, ErrTokenUnknown
 	}
-	if revoked {
+	if route.Revoked {
 		return Identity{}, ErrRevoked
 	}
-	if s.now().UTC().After(notAfter) {
-		return Identity{}, fmt.Errorf("enroll: client certificate expired at %s", notAfter)
+	if s.now().UTC().After(route.ExpiresAt) {
+		return Identity{}, fmt.Errorf("enroll: client certificate expired at %s", route.ExpiresAt)
 	}
-	id.TenantID = tenancy.Tenant(tid)
-	id.Fingerprint = fp
-	if !id.TenantID.Valid() {
-		return Identity{}, ErrTokenUnknown
-	}
+	id := Identity{TenantID: route.Tenant, CollectorID: route.CollectorID, Fingerprint: fp}
 	return id, nil
 }
 

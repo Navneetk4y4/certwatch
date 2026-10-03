@@ -146,45 +146,28 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) (applied []int, err error)
 	return applied, nil
 }
 
-// PreTenancyTables are the ONLY tables allowed to carry a tenant_id without
-// an RLS policy.
+// PreTenancyTable is the ONE table allowed to exist without row-level
+// security.
 //
-// Both answer a question that precedes tenancy, so they cannot be scoped to a
-// tenant: the tenant is the thing being determined.
+// It answers the questions that precede tenancy — which tenant a session
+// cookie, an email domain, a client certificate or an enrolment token belongs
+// to; which login a provider callback is for; which tenants a worker should
+// serve. Those cannot be scoped to a tenant, because the tenant is what is
+// being determined.
 //
-//	session_index           which tenant does this session cookie belong to?
-//	oidc_flows              which login is this provider callback for?
-//	provider_domain_index   which tenant does this email domain belong to?
-//	tenant_registry         which tenants exist, for a worker that serves all
-//	                        of them? One opaque id per row and nothing else.
-//	collector_cert_index    which tenant does this mTLS client certificate
-//	                        belong to, and may it be used at all?
-//	enrollment_token_index  which tenant does this enrolment token belong to,
-//	                        and is it spent or expired?
+// Migration 009 consolidated six narrow tables into this one, and in doing so
+// took away the application role's direct access entirely: every read and
+// write goes through a ptl_* SECURITY DEFINER function that takes one key and
+// returns one kind's fields. See internal/store/pretenancy.go.
 //
-// SIX is a lot, and they are all the same shape: a hashed or opaque key, a
-// tenant id, and just enough to refuse early. The repetition is a signal that
-// one pre_tenancy_lookup table with a typed accessor per kind would be better
-// than six. Noted in migration 008; it should not reach seven without doing it.
-//
-// Each holds only the mapping. No certificate, no endpoint, no user row, and
-// no secret — provider_domain_index carries client_id, which OAuth puts in the
-// user's own address bar, while the client SECRET stays in the policied
-// identity_providers table.
-//
-// session_index and oidc_flows are keyed by 256 bits of entropy and cannot be
-// enumerated. provider_domain_index is keyed by an email domain, which IS
-// guessable — so every lookup against it returns one indistinguishable error
-// for "unknown" and "disabled", and that property has its own test.
-//
-// This list is asserted to its exact length by a test, the same way
-// internal/tools/importcheck bounds its exception list: growing it is a
-// reviewable diff where somebody has to argue for the new entry, not a quiet
-// addition.
-var PreTenancyTables = []string{
-	"session_index", "oidc_flows", "provider_domain_index", "tenant_registry",
-	"collector_cert_index", "enrollment_token_index",
-}
+// The architectural invariant, asserted by TestExactlyOnePreTenancyTable: the
+// set of public tables without FORCED row-level security is exactly
+// {schema_migrations, pre_tenancy_lookup}. A seventh routing table — or any
+// table someone forgets to policy — fails the build.
+const PreTenancyTable = "pre_tenancy_lookup"
+
+// PreTenancyTables is kept as a slice so the sweep below can exclude it.
+var PreTenancyTables = []string{PreTenancyTable}
 
 // UnpoliciedTenantTables is TENANT-004, build item 097 — the sweep.
 //

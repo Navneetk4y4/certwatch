@@ -24,8 +24,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/certwatch/certwatch/internal/store"
 	"github.com/certwatch/certwatch/internal/tenancy"
 )
@@ -131,12 +129,10 @@ func (m *Manager) Create(ctx context.Context, userID, email string,
 			s.ExpiresAt, s.IdleExpiresAt, userAgent, sourceIP).Scan(&s.ID); err != nil {
 			return err
 		}
-		// Same transaction: an index row without a session, or a session
-		// without an index row, would be an un-loggable-in account.
-		_, err := tx.Conn().Exec(ctx,
-			`INSERT INTO session_index (token_hash, session_id, tenant_id)
-			 VALUES ($1, $2::uuid, $3::uuid)`, th, s.ID, tid.String())
-		return err
+		// The pre-tenancy route is written by the sessions_ptl trigger in
+		// this same transaction — never by application code, which has no
+		// write access to the routing table at all.
+		return nil
 	})
 	if err != nil {
 		return "", Session{}, fmt.Errorf("auth: creating session: %w", err)
@@ -156,22 +152,14 @@ func (m *Manager) Lookup(ctx context.Context, token string) (Session, error) {
 	}
 	want := hashToken(token)
 
-	// Step one, pre-tenancy: which tenant is this cookie for? Only
-	// session_index can answer, and it holds nothing else.
-	var tenantID string
-	if err := m.st.Privileged(ctx,
-		"resolve a session cookie to its tenant; a cookie carries no tenant of its own",
-		func(ctx context.Context, p *pgxpool.Pool) error {
-			return p.QueryRow(ctx,
-				`SELECT tenant_id::text FROM session_index WHERE token_hash = $1`, want).
-				Scan(&tenantID)
-		}); err != nil {
+	// Step one, pre-tenancy: which tenant is this cookie for? Answered by
+	// the unified routing accessor, which can return a tenant and a session
+	// id and nothing else.
+	route, err := m.st.LookupSession(ctx, want)
+	if err != nil {
 		return Session{}, ErrNoSession
 	}
-	tn := tenancy.Tenant(tenantID)
-	if !tn.Valid() {
-		return Session{}, ErrNoSession
-	}
+	tn := route.Tenant
 
 	// Step two: everything else is read under that tenant's own RLS policy,
 	// exactly like any other query in the system.
@@ -182,7 +170,7 @@ func (m *Manager) Lookup(ctx context.Context, token string) (Session, error) {
 		storedHash []byte
 		disabled   *time.Time
 	)
-	err := m.st.InTenantTx(tenancy.WithTenant(ctx, tn),
+	err = m.st.InTenantTx(tenancy.WithTenant(ctx, tn),
 		func(ctx context.Context, tx *store.Tx) error {
 			return tx.Conn().QueryRow(ctx, `
 				SELECT s.id::text, s.user_id::text, u.email::text, u.role::text,
@@ -256,12 +244,6 @@ func (m *Manager) Rotate(ctx context.Context, s Session) (string, Session, error
 			VALUES ($1::uuid, $2::uuid, $3, $4, $5) RETURNING id::text`,
 			s.TenantID.String(), s.UserID, hashToken(newTok),
 			next.ExpiresAt, next.IdleExpiresAt).Scan(&newID); err != nil {
-			return err
-		}
-		if _, err := tx.Conn().Exec(ctx,
-			`INSERT INTO session_index (token_hash, session_id, tenant_id)
-			 VALUES ($1, $2::uuid, $3::uuid)`,
-			hashToken(newTok), newID, s.TenantID.String()); err != nil {
 			return err
 		}
 		_, err := tx.Conn().Exec(ctx,

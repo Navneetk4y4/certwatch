@@ -9,19 +9,35 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO certwatch_app;
 GRANT EXECUTE ON FUNCTION uuid_v7() TO certwatch_app;
 GRANT EXECUTE ON FUNCTION create_organization(text, citext) TO certwatch_app;
 
--- session_index and oidc_flows are the two deliberately un-policied tables.
--- Both answer PRE-tenancy questions: "which tenant does this cookie belong
--- to" and "which login is this callback for". Neither can be scoped to a
--- tenant, because the tenant is the thing being determined.
-
 -- Tables created by later migrations inherit the same grants.
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
     GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO certwatch_app;
 
+-- ---------------------------------------------------------------------------
+-- pre_tenancy_lookup: NO direct privilege at all.
+--
+-- It is the one table without row-level security, because it answers
+-- questions that precede tenancy. The blanket GRANT above would hand the app
+-- role full DML on it, which would let a SQL injection anywhere forge a
+-- session route or claim another tenant's email domain. So everything is taken
+-- back here, and the app reaches it only through the ptl_* functions, each of
+-- which takes one key and returns one kind's fields.
+--
+-- This REVOKE must stay AFTER the blanket GRANT. TestPreTenancyLookupIsNot
+-- DirectlyAccessible asserts the result, so reordering these lines fails the
+-- build rather than silently reopening the table.
+-- ---------------------------------------------------------------------------
+REVOKE ALL ON pre_tenancy_lookup FROM certwatch_app;
+GRANT EXECUTE ON FUNCTION
+    ptl_create_oidc_flow(text,text,text,text,text,text,text,timestamptz),
+    ptl_consume_oidc_flow(text),
+    ptl_session(bytea),
+    ptl_email_domain(text),
+    ptl_collector_cert(text),
+    ptl_enrollment_token(bytea),
+    ptl_active_tenants()
+  TO certwatch_app;
+
 -- Explicitly withheld, so the absence is a decision and not an oversight.
 REVOKE TRUNCATE ON ALL TABLES IN SCHEMA public FROM certwatch_app;
-GRANT EXECUTE ON FUNCTION sync_provider_domain_index() TO certwatch_app;
-GRANT EXECUTE ON FUNCTION sync_tenant_registry() TO certwatch_app;
-GRANT EXECUTE ON FUNCTION sync_collector_cert_index() TO certwatch_app;
-GRANT EXECUTE ON FUNCTION sync_enrollment_token_index() TO certwatch_app;
 REVOKE CREATE ON SCHEMA public FROM certwatch_app;

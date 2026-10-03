@@ -123,11 +123,18 @@ func newFakeIDP(t *testing.T, clientID string) *fakeIDP {
 		if f.overrideNonce != "" {
 			nonce = f.overrideNonce
 		}
+		// aud is the client that made THIS request, as a real IdP does.
+		aud := clientID
+		if u, _, ok := r.BasicAuth(); ok && u != "" {
+			aud = u
+		} else if c := r.Form.Get("client_id"); c != "" {
+			aud = c
+		}
 		writeJSONRaw(w, map[string]any{
 			"access_token": "at-" + randHex(),
 			"token_type":   "Bearer",
 			"expires_in":   3600,
-			"id_token":     f.mintIDToken(t, clientID, nonce),
+			"id_token":     f.mintIDToken(t, aud, nonce),
 		})
 	})
 	f.srv = httptest.NewServer(mux)

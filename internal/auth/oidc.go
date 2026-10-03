@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/oauth2"
 
 	"github.com/certwatch/certwatch/internal/store"
@@ -135,38 +134,21 @@ func (o *OIDC) redirectAllowed(uri string) bool {
 
 // ProviderForDomain resolves an email domain to its tenant's provider.
 //
-// Pre-tenancy by necessity: the domain is what decides the tenant. It reads
-// identity_providers, which IS tenant-policied, so the lookup goes through a
-// narrow privileged query — and returns the same error for "no such domain"
-// as for "disabled", so a caller cannot enumerate which companies are
-// customers.
+// Pre-tenancy by necessity: the domain is what decides the tenant. It goes
+// through store.LookupEmailDomain, which returns nothing for a disabled
+// provider, so "no such domain" and "disabled" are the same answer and a
+// caller cannot enumerate which companies are customers.
 func (o *OIDC) ProviderForDomain(ctx context.Context, domain string) (Provider, error) {
 	domain = strings.ToLower(strings.TrimSpace(domain))
 	if domain == "" {
 		return Provider{}, ErrUnknownDomain
 	}
-	var p Provider
-	var tid string
-	err := o.st.Privileged(ctx,
-		"resolve an email domain to its tenant's identity provider; the domain IS the tenant selector",
-		func(ctx context.Context, pool *pgxpool.Pool) error {
-			return pool.QueryRow(ctx, `
-				SELECT tenant_id::text, issuer, client_id, email_domain::text
-				  FROM provider_domain_index
-				 WHERE email_domain = $1 AND enabled`, domain).
-				Scan(&tid, &p.Issuer, &p.ClientID, &p.EmailDomain)
-		})
+	r, err := o.st.LookupEmailDomain(ctx, domain)
 	if err != nil {
-		// One error for every failure. "Unknown domain" and "disabled
-		// provider" must be indistinguishable: the difference tells an
-		// outsider whether a company is a customer.
 		return Provider{}, ErrUnknownDomain
 	}
-	p.TenantID = tenancy.Tenant(tid)
-	if !p.TenantID.Valid() {
-		return Provider{}, ErrUnknownDomain
-	}
-	return p, nil
+	return Provider{TenantID: r.Tenant, Issuer: r.Issuer, ClientID: r.ClientID,
+		EmailDomain: domain}, nil
 }
 
 // AuthRequest is what Start returns: where to send the browser.
@@ -205,15 +187,14 @@ func (o *OIDC) Start(ctx context.Context, emailDomain, redirectURI string) (Auth
 		return AuthRequest{}, err
 	}
 
-	if err := o.st.Privileged(ctx, "record an in-flight login; no tenant is decided yet",
-		func(ctx context.Context, pool *pgxpool.Pool) error {
-			_, e := pool.Exec(ctx, `
-				INSERT INTO oidc_flows (state, nonce, code_verifier, redirect_uri, issuer, expires_at)
-				VALUES ($1,$2,$3,$4,$5,$6)`,
-				state, nonce, verifier, redirectURI, prov.Issuer, o.now().UTC().Add(FlowTTL))
-			return e
-		}); err != nil {
-		return AuthRequest{}, fmt.Errorf("auth: recording login state: %w", err)
+	// The flow remembers the CLIENT and the DOMAIN it was started for, not
+	// just the issuer. See Complete for why each is needed.
+	if err := o.st.CreateOIDCFlow(ctx, store.OIDCFlow{
+		State: state, Nonce: nonce, CodeVerifier: verifier, RedirectURI: redirectURI,
+		Issuer: prov.Issuer, ClientID: prov.ClientID, EmailDomain: prov.EmailDomain,
+		ExpiresAt: o.now().UTC().Add(FlowTTL),
+	}); err != nil {
+		return AuthRequest{}, err
 	}
 
 	cfg := oauth2.Config{
@@ -246,46 +227,35 @@ func (o *OIDC) Complete(ctx context.Context, state, code string) (Identity, erro
 		return Identity{}, ErrStateUnknown
 	}
 
-	// Consume the flow row ATOMICALLY. The UPDATE ... WHERE consumed_at IS
-	// NULL RETURNING pattern means two concurrent callbacks with the same
-	// state cannot both succeed: exactly one gets a row. That is code-replay
-	// protection that does not depend on timing.
-	var nonce, verifier, redirectURI, issuer string
-	var expires time.Time
-	err := o.st.Privileged(ctx, "consume an in-flight login state exactly once",
-		func(ctx context.Context, pool *pgxpool.Pool) error {
-			return pool.QueryRow(ctx, `
-				UPDATE oidc_flows SET consumed_at = now()
-				 WHERE state = $1 AND consumed_at IS NULL
-				RETURNING nonce, code_verifier, redirect_uri, issuer, expires_at`, state).
-				Scan(&nonce, &verifier, &redirectURI, &issuer, &expires)
-		})
+	// Consume the flow ATOMICALLY: two concurrent callbacks with the same
+	// state cannot both receive it. Code-replay protection that does not
+	// depend on timing.
+	flow, err := o.st.ConsumeOIDCFlow(ctx, state)
 	if err != nil {
-		// Either unknown or already used. Same answer for both.
+		// Unknown or already used: one answer for both.
 		return Identity{}, ErrStateUnknown
 	}
-	if o.now().UTC().After(expires) {
+	if o.now().UTC().After(flow.ExpiresAt) {
 		return Identity{}, ErrStateUnknown
 	}
 
-	p, err := o.providerFor(ctx, issuer)
+	p, err := o.providerFor(ctx, flow.Issuer)
 	if err != nil {
 		return Identity{}, fmt.Errorf("auth: provider discovery failed: %w", err)
 	}
-	prov, err := o.providerForIssuer(ctx, issuer)
-	if err != nil {
-		return Identity{}, ErrUnknownDomain
-	}
 
+	// The exchange and the audience check use the client this flow was
+	// STARTED with. The earlier code looked the client up again by issuer with
+	// LIMIT 1, which picks an arbitrary tenant's client whenever two tenants
+	// share an identity provider.
 	cfg := oauth2.Config{
-		ClientID:     prov.ClientID,
-		ClientSecret: prov.ClientSecret,
-		Endpoint:     p.Endpoint(),
-		RedirectURL:  redirectURI,
-		Scopes:       []string{oidc.ScopeOpenID, "email", "profile"},
+		ClientID:    flow.ClientID,
+		Endpoint:    p.Endpoint(),
+		RedirectURL: flow.RedirectURI,
+		Scopes:      []string{oidc.ScopeOpenID, "email", "profile"},
 	}
 	tok, err := cfg.Exchange(ctx, code,
-		oauth2.SetAuthURLParam("code_verifier", verifier))
+		oauth2.SetAuthURLParam("code_verifier", flow.CodeVerifier))
 	if err != nil {
 		return Identity{}, fmt.Errorf("auth: code exchange failed: %w", err)
 	}
@@ -294,15 +264,13 @@ func (o *OIDC) Complete(ctx context.Context, state, code string) (Identity, erro
 		return Identity{}, errors.New("auth: provider returned no id_token")
 	}
 
-	// Signature, issuer and audience, all checked against discovery + JWKS.
-	verifier2 := p.Verifier(&oidc.Config{ClientID: prov.ClientID})
-	idt, err := verifier2.Verify(ctx, rawID)
+	// Signature, issuer and audience against discovery + JWKS.
+	idt, err := p.Verifier(&oidc.Config{ClientID: flow.ClientID}).Verify(ctx, rawID)
 	if err != nil {
 		return Identity{}, fmt.Errorf("auth: id token rejected: %w", err)
 	}
-	if idt.Nonce != nonce {
-		// A token minted for a different login. Without this check a token
-		// captured elsewhere is accepted here.
+	if idt.Nonce != flow.Nonce {
+		// A token minted for a different login.
 		return Identity{}, ErrNonceMismatch
 	}
 
@@ -317,47 +285,42 @@ func (o *OIDC) Complete(ctx context.Context, state, code string) (Identity, erro
 	if email == "" || !strings.Contains(email, "@") {
 		return Identity{}, errors.New("auth: id token carries no usable email claim")
 	}
-	// An unverified email is an unproven domain, and the domain is what picks
-	// the tenant. Accepting it would let anyone who can set a profile field
-	// choose which company to join.
+	// An unverified email is an unproven domain, and the domain picks the
+	// tenant.
 	if claims.EmailVerified == nil || !*claims.EmailVerified {
 		return Identity{}, ErrEmailUnverified
 	}
 	domain := email[strings.LastIndex(email, "@")+1:]
 
-	// The tenant comes from the VERIFIED domain, and the provider that minted
-	// the token must be the one registered for that domain. Without this
-	// second check, a tenant's own provider could mint a token with somebody
-	// else's domain in the email claim and cross into their account.
+	// Three bindings decide the tenant. Each closes a different cross-tenant
+	// path, and each has its own test.
+	//
+	// (1) The identity must be in the domain the login was started for. You
+	//     cannot start on tenant B's domain and come back as someone in A's.
+	if domain != flow.EmailDomain {
+		return Identity{}, ErrUnknownDomain
+	}
+	// (2) The domain's CURRENT route must still be the (issuer, client) this
+	//     flow was started with. Issuer alone is not enough: tenants that
+	//     share an identity provider share an issuer. And a domain can change
+	//     hands within a flow's ten-minute life — released by one tenant,
+	//     claimed by another — so a login started for the old owner must not
+	//     complete into the new one.
 	bound, err := o.ProviderForDomain(ctx, domain)
 	if err != nil {
 		return Identity{}, ErrUnknownDomain
 	}
-	if bound.Issuer != issuer {
+	if bound.Issuer != flow.Issuer {
 		return Identity{}, ErrUnknownDomain
 	}
+	// (3) One (issuer, client) registration belongs to exactly one tenant —
+	//     enforced at registration by the ptl_sync_email_domain trigger, since
+	//     client IDs are public and a tenant could otherwise register another
+	//     tenant's.
 	return Identity{
-		Subject: idt.Subject, Email: email, Issuer: issuer,
+		Subject: idt.Subject, Email: email, Issuer: flow.Issuer,
 		TenantID: bound.TenantID, Domain: domain,
 	}, nil
-}
-
-// providerForIssuer finds the registered client for an issuer.
-func (o *OIDC) providerForIssuer(ctx context.Context, issuer string) (Provider, error) {
-	var p Provider
-	var tid string
-	err := o.st.Privileged(ctx, "resolve an issuer to its registered client id",
-		func(ctx context.Context, pool *pgxpool.Pool) error {
-			return pool.QueryRow(ctx, `
-				SELECT tenant_id::text, issuer, client_id, email_domain::text
-				  FROM provider_domain_index WHERE issuer = $1 AND enabled LIMIT 1`, issuer).
-				Scan(&tid, &p.Issuer, &p.ClientID, &p.EmailDomain)
-		})
-	if err != nil {
-		return Provider{}, ErrUnknownDomain
-	}
-	p.TenantID = tenancy.Tenant(tid)
-	return p, nil
 }
 
 // ProvisionUser is AUTH-003, item 100: just-in-time provisioning.

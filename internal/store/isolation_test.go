@@ -393,69 +393,139 @@ func TestTableOwnerIsAlsoSubjectToThePolicy(t *testing.T) {
 	}
 }
 
-// The pre-tenancy exemption is bounded by this test. If somebody adds a third
-// un-policied table, this fails and they have to justify it in a diff rather
-// than add it quietly.
-func TestPreTenancyExemptionListStaysSmall(t *testing.T) {
-	want := []string{"session_index", "oidc_flows", "provider_domain_index",
-		"tenant_registry", "collector_cert_index", "enrollment_token_index"}
-	if len(PreTenancyTables) != len(want) {
-		t.Fatalf("PreTenancyTables has %d entries, want exactly %d (%v).\n"+
-			"Every entry is a table with a tenant_id and NO row-level security. "+
-			"Adding one needs an argument, not a commit.",
-			len(PreTenancyTables), len(want), want)
+// THE architectural invariant. Exactly one table may exist without forced
+// row-level security, besides the migration bookkeeping table.
+//
+// This replaces a list that grew to six entries one justified exception at a
+// time. Asserting the SET of unprotected tables, rather than a list of known
+// exemptions, catches both a seventh routing table and any ordinary table
+// someone forgets to policy — neither needs to have a tenant_id to be caught.
+func TestExactlyOnePreTenancyTable(t *testing.T) {
+	_, mig := newTestDB(t)
+	rows, err := mig.Query(context.Background(), `
+		SELECT c.relname FROM pg_class c
+		  JOIN pg_namespace n ON n.oid = c.relnamespace
+		 WHERE n.nspname = 'public' AND c.relkind = 'r'
+		   AND NOT (c.relrowsecurity AND c.relforcerowsecurity
+		            AND EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid = c.oid))
+		 ORDER BY 1`)
+	if err != nil {
+		t.Fatal(err)
 	}
-	for i := range want {
-		if PreTenancyTables[i] != want[i] {
-			t.Errorf("PreTenancyTables[%d] = %q, want %q", i, PreTenancyTables[i], want[i])
+	var got []string
+	for rows.Next() {
+		var n string
+		if err := rows.Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		got = append(got, n)
+	}
+	rows.Close()
+	want := []string{PreTenancyTable, "schema_migrations"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("tables without forced RLS = %v, want exactly %v.\n"+
+			"Pre-tenancy questions go through pre_tenancy_lookup and the ptl_* "+
+			"functions. Every other table needs SELECT tenant_rls('<table>').", got, want)
+	}
+}
+
+// The one unprotected table holds exactly these columns. A new column is
+// either a new piece of pre-authentication data, which needs an argument, or
+// tenant data that has no business being outside RLS.
+func TestPreTenancyLookupColumnsAreExact(t *testing.T) {
+	_, mig := newTestDB(t)
+	rows, err := mig.Query(context.Background(), `
+		SELECT a.attname FROM pg_attribute a JOIN pg_class c ON c.oid = a.attrelid
+		 WHERE c.relname = $1 AND a.attnum > 0 AND NOT a.attisdropped
+		 ORDER BY a.attnum`, PreTenancyTable)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for rows.Next() {
+		var n string
+		if err := rows.Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		got = append(got, n)
+	}
+	rows.Close()
+	want := []string{"kind", "lookup_key", "tenant_id", "subject_id", "issuer",
+		"client_id", "email_domain", "expires_at", "refused", "nonce",
+		"code_verifier", "redirect_uri", "created_at"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Errorf("pre_tenancy_lookup columns = %v\nwant %v", got, want)
+	}
+}
+
+// The application role must have NO direct privilege on the routing table.
+// Every access goes through a ptl_* function. If grants.sql is reordered so the
+// blanket GRANT lands after the REVOKE, this fails rather than silently
+// reopening the table to forgery.
+func TestPreTenancyLookupIsNotDirectlyAccessible(t *testing.T) {
+	_, mig := newTestDB(t)
+	for _, priv := range []string{"SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE"} {
+		var has bool
+		if err := mig.QueryRow(context.Background(),
+			`SELECT has_table_privilege('certwatch_app', $1, $2)`,
+			PreTenancyTable, priv).Scan(&has); err != nil {
+			t.Fatal(err)
+		}
+		if has {
+			t.Errorf("certwatch_app has %s on %s; it must reach it only through ptl_* functions",
+				priv, PreTenancyTable)
 		}
 	}
 }
 
-// And the exemption must not become a hole: an exempt table may hold ONLY the
-// mapping it exists for. If session_index ever grows a column carrying real
-// tenant data, it stops being a lookup index and becomes an un-policied copy
-// of customer records.
-func TestExemptTablesHoldOnlyTheirMapping(t *testing.T) {
-	_, mig := newTestDB(t)
-	allowed := map[string]map[string]bool{
-		"session_index": {"token_hash": true, "session_id": true, "tenant_id": true},
-		"oidc_flows": {"state": true, "nonce": true, "code_verifier": true,
-			"redirect_uri": true, "issuer": true, "created_at": true,
-			"expires_at": true, "consumed_at": true},
-		// Routing only. If a secret column ever appears here, this fails.
-		"provider_domain_index": {"email_domain": true, "tenant_id": true,
-			"issuer": true, "client_id": true, "enabled": true},
-		// One opaque id and a flag. If a name, plan or domain ever appears
-		// here, an un-policied table has started describing customers.
-		"tenant_registry": {"tenant_id": true, "active": true},
-		// Identity routing plus the two facts needed to REFUSE a certificate
-		// before any tenant-scoped code runs. No key, no certificate body.
-		"collector_cert_index": {"fingerprint": true, "tenant_id": true,
-			"collector_id": true, "not_after": true, "revoked": true},
-		// Hash, tenant, and the two facts needed to refuse early. No creator,
-		// no collector, and never the token itself.
-		"enrollment_token_index": {"token_hash": true, "tenant_id": true,
-			"expires_at": true, "used": true},
+// And the denial is real, not just reported: the app role's own connection is
+// refused when it tries to read or forge a route directly.
+func TestAppRoleCannotReadOrForgeRoutes(t *testing.T) {
+	s, mig := newTestDB(t)
+	a := makeTenant(t, mig, "tenant-a")
+	ctx := context.Background()
+
+	if _, err := s.pool.Exec(ctx, `SELECT count(*) FROM pre_tenancy_lookup`); err == nil {
+		t.Error("the app role read pre_tenancy_lookup directly")
 	}
-	for tbl, cols := range allowed {
-		rows, err := mig.Query(context.Background(), `
-			SELECT a.attname FROM pg_attribute a
-			  JOIN pg_class c ON c.oid = a.attrelid
-			 WHERE c.relname = $1 AND a.attnum > 0 AND NOT a.attisdropped`, tbl)
-		if err != nil {
-			t.Fatal(err)
-		}
-		for rows.Next() {
-			var col string
-			if err := rows.Scan(&col); err != nil {
-				t.Fatal(err)
+	_, err := s.pool.Exec(ctx, `
+		INSERT INTO pre_tenancy_lookup (kind, lookup_key, tenant_id, issuer, client_id)
+		VALUES ('email_domain','forged.test',$1::uuid,'https://idp','c')`, a.String())
+	if err == nil {
+		t.Fatal("the app role FORGED an email-domain route directly")
+	}
+	if !strings.Contains(err.Error(), "permission denied") {
+		t.Errorf("refused, but not by privilege: %v", err)
+	}
+}
+
+// Kind and shape are constrained: this is a typed union, not a key/value bag.
+func TestPreTenancyKindAndShapeAreConstrained(t *testing.T) {
+	_, mig := newTestDB(t)
+	a := makeTenant(t, mig, "tenant-a")
+	ctx := context.Background()
+	for _, tc := range []struct{ name, sql string }{
+		{"unknown kind", `INSERT INTO pre_tenancy_lookup (kind, lookup_key)
+			VALUES ('arbitrary','x')`},
+		{"session carrying an issuer", `INSERT INTO pre_tenancy_lookup
+			(kind, lookup_key, tenant_id, subject_id, issuer)
+			VALUES ('session', repeat('a',64), '` + a.String() + `'::uuid, gen_random_uuid(), 'x')`},
+		{"session key not a sha256", `INSERT INTO pre_tenancy_lookup
+			(kind, lookup_key, tenant_id, subject_id)
+			VALUES ('session', 'short', '` + a.String() + `'::uuid, gen_random_uuid())`},
+		{"oidc flow with a tenant", `INSERT INTO pre_tenancy_lookup
+			(kind, lookup_key, tenant_id, issuer, client_id, email_domain, expires_at,
+			 nonce, code_verifier, redirect_uri)
+			VALUES ('oidc_flow', repeat('s',40), '` + a.String() + `'::uuid, 'i','c','d',now(),
+			        'n','v','r')`},
+		{"email domain not lowercase", `INSERT INTO pre_tenancy_lookup
+			(kind, lookup_key, tenant_id, issuer, client_id)
+			VALUES ('email_domain','Mixed.Test','` + a.String() + `'::uuid,'i','c')`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := mig.Exec(ctx, tc.sql); err == nil {
+				t.Errorf("the schema accepted: %s", tc.name)
 			}
-			if !cols[col] {
-				t.Errorf("%s.%s is not in the permitted column set. An un-policied "+
-					"table may hold only the mapping it exists for.", tbl, col)
-			}
-		}
-		rows.Close()
+		})
 	}
 }

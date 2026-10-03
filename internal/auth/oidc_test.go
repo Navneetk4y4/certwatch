@@ -438,3 +438,89 @@ func TestProviderFailureIsHandledCleanly(t *testing.T) {
 		t.Errorf("provider failure produced %v", err)
 	}
 }
+
+// Two tenants that use the SAME identity provider — the common case: Google
+// Workspace, Microsoft Entra — share an issuer and differ only in client_id.
+//
+// An attacker starts a login on tenant B's domain, so the flow and the token's
+// audience are B's client. The IdP returns a verified email on tenant A's
+// domain. The signature, nonce, issuer and audience are all genuine.
+//
+// The token's audience is B's client, and A's domain is registered to A's
+// client. If only the ISSUER is compared, the two look identical and the user
+// lands in tenant A.
+func TestSharedIssuerCannotCrossTenantsByClient(t *testing.T) {
+	x := newOIDCFixture(t)
+	ctxB := tenancy.WithTenant(context.Background(), x.tenantB)
+	if err := x.st.InTenantTx(ctxB, func(ctx context.Context, tx *store.Tx) error {
+		_, e := tx.Conn().Exec(ctx, `
+			INSERT INTO identity_providers (tenant_id, issuer, client_id, email_domain)
+			VALUES ($1::uuid,$2,$3,$4)`,
+			x.tenantB.String(), x.idp.issuer, "client-b", "tenant-b.test")
+		return e
+	}); err != nil {
+		t.Fatal(err)
+	}
+	x.idp.email = "victim@tenant-a.test"
+
+	id, err := x.drive(t, "tenant-b.test")
+	if err == nil {
+		t.Fatalf("a token issued to tenant B's client was accepted into tenant %s "+
+			"(A is %s). Issuer equality is not enough when issuers are shared.",
+			id.TenantID, x.tenantA)
+	}
+	if !errors.Is(err, ErrUnknownDomain) {
+		t.Errorf("err = %v, want ErrUnknownDomain (non-enumerable)", err)
+	}
+}
+
+// A domain can change hands inside a login's ten-minute life: tenant A deletes
+// its provider, releasing the domain, and tenant B claims it with its own
+// client. A login started while A owned the domain must not complete into B.
+//
+// Binding (2) catches this, and only (2): the identity IS in the domain the
+// flow was started for, so binding (1) passes. The domain's CURRENT route is
+// B's client while the flow — and the token's audience — is A's.
+func TestALoginStartedBeforeADomainChangesHandsCannotCompleteIntoTheNewOwner(t *testing.T) {
+	x := newOIDCFixture(t)
+	req, err := x.o.Start(context.Background(), "tenant-a.test", testRedirect)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A releases the domain; B claims it with its own client on the same IdP.
+	ctxA := tenancy.WithTenant(context.Background(), x.tenantA)
+	if err := x.st.InTenantTx(ctxA, func(ctx context.Context, tx *store.Tx) error {
+		_, e := tx.Conn().Exec(ctx, `DELETE FROM identity_providers`)
+		return e
+	}); err != nil {
+		t.Fatal(err)
+	}
+	ctxB := tenancy.WithTenant(context.Background(), x.tenantB)
+	if err := x.st.InTenantTx(ctxB, func(ctx context.Context, tx *store.Tx) error {
+		_, e := tx.Conn().Exec(ctx, `
+			INSERT INTO identity_providers (tenant_id, issuer, client_id, email_domain)
+			VALUES ($1::uuid,$2,'client-b','tenant-a.test')`, x.tenantB.String(), x.idp.issuer)
+		return e
+	}); err != nil {
+		t.Fatalf("B could not claim the released domain: %v", err)
+	}
+
+	// Finish the login that began under A.
+	c := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	}}
+	resp, err := c.Get(req.AuthorizationURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	loc, _ := url.Parse(resp.Header.Get("Location"))
+	id, err := x.o.Complete(context.Background(), req.State, loc.Query().Get("code"))
+	if err == nil {
+		t.Fatalf("a login started under tenant A completed into tenant %s after the "+
+			"domain changed hands (B is %s)", id.TenantID, x.tenantB)
+	}
+	if !errors.Is(err, ErrUnknownDomain) {
+		t.Errorf("err = %v, want ErrUnknownDomain", err)
+	}
+}
