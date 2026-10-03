@@ -145,6 +145,17 @@ func TestAClientRegistrationBelongsToOneTenant(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := registerProvider(t, s, b.String(), "https://idp", "client-a", "b.test"); err == nil {
+		rows, _ := mig.Query(context.Background(),
+			`SELECT kind::text, lookup_key, coalesce(tenant_id::text,''), coalesce(issuer,''),
+			        coalesce(client_id,''), refused FROM pre_tenancy_lookup ORDER BY kind, lookup_key`)
+		for rows.Next() {
+			var k, key, tid, iss, cid string
+			var ref bool
+			_ = rows.Scan(&k, &key, &tid, &iss, &cid, &ref)
+			t.Logf("DUMP %-13s %-10s tenant=%.8s iss=%s client=%s refused=%v", k, key, tid, iss, cid, ref)
+		}
+		rows.Close()
+		t.Logf("DUMP a=%.8s b=%.8s", a.String(), b.String())
 		t.Fatal("tenant B registered tenant A's OAuth client for its own domain")
 	}
 	// The same tenant may use one client for several domains.

@@ -297,6 +297,14 @@ func (o *OIDC) Complete(ctx context.Context, state, code string) (Identity, erro
 	//
 	// (1) The identity must be in the domain the login was started for. You
 	//     cannot start on tenant B's domain and come back as someone in A's.
+	//
+	//     MEASURED: removing (1) alone fails no test, and that is correct.
+	//     Given (2) and (3), an identity in a different domain can only pass
+	//     if that domain's route is the flow's exact (issuer, client), and (3)
+	//     makes a client belong to one tenant — so the user can only ever land
+	//     in the tenant whose client the token was issued to. (1) is defence in
+	//     depth against (3) failing, and it is kept for that reason. Removing
+	//     (2), or weakening it back to an issuer-only comparison, IS caught.
 	if domain != flow.EmailDomain {
 		return Identity{}, ErrUnknownDomain
 	}
@@ -310,7 +318,7 @@ func (o *OIDC) Complete(ctx context.Context, state, code string) (Identity, erro
 	if err != nil {
 		return Identity{}, ErrUnknownDomain
 	}
-	if bound.Issuer != flow.Issuer {
+	if bound.Issuer != flow.Issuer || bound.ClientID != flow.ClientID {
 		return Identity{}, ErrUnknownDomain
 	}
 	// (3) One (issuer, client) registration belongs to exactly one tenant —
