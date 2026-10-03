@@ -35,6 +35,8 @@ import (
 	"github.com/certwatch/certwatch/internal/sched"
 	"github.com/certwatch/certwatch/internal/store"
 	"github.com/certwatch/certwatch/internal/tenancy"
+	"github.com/certwatch/certwatch/pkg/keyscan"
+	"github.com/certwatch/certwatch/pkg/model"
 	"github.com/certwatch/certwatch/pkg/safelog"
 )
 
@@ -60,71 +62,24 @@ var (
 	ErrBadVersion     = errors.New("ingest: unsupported protocol version")
 )
 
-// Batch is the wire payload. Every field is explicit; the decoder is closed.
-type Batch struct {
-	BatchID     string    `json:"batch_id"`
-	TenantID    string    `json:"tenant_id"`
-	CollectorID string    `json:"collector_id"`
-	StartedAt   time.Time `json:"started_at"`
-	FinishedAt  time.Time `json:"finished_at"`
-	ScopeDigest string    `json:"scope_digest,omitempty"`
-	// TaskID names the task these results answer, if any. Accepted by the
-	// server BEFORE any collector sends it: the decoder is schema-closed, so
-	// a collector that shipped the field first would have every batch refused.
-	TaskID       string        `json:"task_id,omitempty"`
-	Observations []Observation `json:"observations"`
-}
+// Batch and Observation are the wire types, defined once in pkg/model and
+// shared verbatim with the collector (PROTO-001): drift between the two ends
+// is a compile error, not a silently dropped field.
+type (
+	Batch       = model.IngestBatch
+	Observation = model.IngestObservation
+)
 
-// Observation is one certificate seen at one address.
-type Observation struct {
-	Hostname     string    `json:"hostname,omitempty"`
-	Address      string    `json:"address"`
-	Port         int       `json:"port"`
-	SNI          string    `json:"sni,omitempty"`
-	Fingerprint  string    `json:"sha256"`
-	SubjectCN    string    `json:"subject_cn,omitempty"`
-	SubjectDN    string    `json:"subject_dn,omitempty"`
-	IssuerDN     string    `json:"issuer_dn,omitempty"`
-	SANs         []string  `json:"sans,omitempty"`
-	Serial       string    `json:"serial,omitempty"`
-	NotBefore    time.Time `json:"not_before"`
-	NotAfter     time.Time `json:"not_after"`
-	KeyAlgorithm string    `json:"key_algorithm,omitempty"`
-	KeySize      *int      `json:"key_size,omitempty"`
-	ParseStatus  string    `json:"parse_status,omitempty"`
-	ObservedAt   time.Time `json:"observed_at"`
-}
-
-// keyPatterns are the shapes private-key material takes in a payload.
-//
-// INV-5. Deliberately broad: a false positive costs a collector one rejected
-// batch and a loud error; a false negative means key material in our database.
-// The asymmetry is the entire argument for erring wide.
-var keyPatterns = []*regexp.Regexp{
-	regexp.MustCompile(`(?i)-----BEGIN[ A-Z]*PRIVATE KEY-----`),
-	regexp.MustCompile(`(?i)-----BEGIN[ A-Z]*ENCRYPTED PRIVATE KEY-----`),
-	regexp.MustCompile(`(?i)\bPuTTY-User-Key-File\b`),
-	regexp.MustCompile(`(?i)\bprivateKeyPem\b|\bprivate_key_pem\b|\bprivateKey\b`),
-	// PKCS#8 and PKCS#1 DER headers, base64-encoded. These are what a buggy
-	// collector that base64s a whole file would actually send.
-	regexp.MustCompile(`MII[A-Za-z0-9+/]{6,}(?:BAD|AgEAAo|EvAIBA|EvQIBA)`),
-	regexp.MustCompile(`(?i)\bBEGIN RSA PRIVATE\b|\bBEGIN EC PRIVATE\b|\bBEGIN DSA PRIVATE\b`),
-}
-
-// ScanForKeyMaterial returns the pattern that matched, or empty.
+// ScanForKeyMaterial returns the pattern that matched, or empty. It is
+// pkg/keyscan, the same scan the collector applies before anything reaches
+// its spool: the server repeats it because the collector's copy can have a
+// bug.
 //
 // Runs over the RAW decompressed bytes, before JSON decoding. Scanning the
 // decoded struct would miss key material hidden in a field the schema does not
 // model — and the schema is closed, so such a field would be rejected anyway,
 // but the scan must not depend on that ordering.
-func ScanForKeyMaterial(raw []byte) string {
-	for _, re := range keyPatterns {
-		if loc := re.FindIndex(raw); loc != nil {
-			return re.String()
-		}
-	}
-	return ""
-}
+func ScanForKeyMaterial(raw []byte) string { return keyscan.Scan(raw) }
 
 // Decoder limits and closes the payload.
 type Decoder struct{ log *safelog.Logger }

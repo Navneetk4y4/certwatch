@@ -21,6 +21,7 @@ import (
 	"github.com/certwatch/certwatch/internal/sched"
 	"github.com/certwatch/certwatch/internal/store"
 	"github.com/certwatch/certwatch/internal/tenancy"
+	"github.com/certwatch/certwatch/pkg/model"
 	"github.com/certwatch/certwatch/pkg/safelog"
 )
 
@@ -42,9 +43,19 @@ import (
 // signature header and the Mode 2 listener never consults a certificate, so
 // neither can be used to bypass the other.
 
+// The wire types, from pkg/model.
+type (
+	Deprecation       = model.Deprecation
+	Task              = model.Task
+	TaskEndpoint      = model.TaskEndpoint
+	TasksResponse     = model.TasksResponse
+	Heartbeat         = model.Heartbeat
+	HeartbeatResponse = model.HeartbeatResponse
+)
+
 // ProtocolVersionHeader names the request's protocol version. It is echoed on
 // every response.
-const ProtocolVersionHeader = "X-Certwatch-Protocol"
+const ProtocolVersionHeader = model.ProtocolVersionHeader
 
 // CurrentProtocol is the newest protocol this server speaks.
 const CurrentProtocol = 1
@@ -63,14 +74,6 @@ type VersionPolicy struct {
 func DefaultVersionPolicy() VersionPolicy {
 	return VersionPolicy{Current: CurrentProtocol,
 		UpgradeURL: "https://certwatch.example/docs/collector-upgrade"}
-}
-
-// Deprecation is the notice an old collector receives.
-type Deprecation struct {
-	Version        int    `json:"protocol_version"`
-	SupportedUntil string `json:"supported_until"`
-	Message        string `json:"message"`
-	UpgradeURL     string `json:"upgrade_url"`
 }
 
 var versionRE = regexp.MustCompile(`^[1-9][0-9]{0,3}$`)
@@ -408,27 +411,6 @@ func (a *API) observations(w http.ResponseWriter, r *http.Request, id enroll.Ide
 	})
 }
 
-// Task is the wire form of one task. TaskType is a closed enum on both ends.
-type Task struct {
-	TaskID   string        `json:"task_id"`
-	Type     string        `json:"type"`
-	Endpoint *TaskEndpoint `json:"endpoint,omitempty"`
-	Deadline time.Time     `json:"deadline"`
-}
-
-// TaskEndpoint names what a VERIFY_ENDPOINT task checks.
-type TaskEndpoint struct {
-	Hostname string `json:"hostname"`
-	Port     int    `json:"port"`
-	SNI      string `json:"sni"`
-}
-
-// TasksResponse is the body of GET /v1/tasks.
-type TasksResponse struct {
-	Tasks            []Task `json:"tasks"`
-	PollAfterSeconds int    `json:"poll_after_seconds"`
-}
-
 func (a *API) tasks(w http.ResponseWriter, r *http.Request, id enroll.Identity, _ []byte, _ *Deprecation) {
 	q, err := url.ParseQuery(r.URL.RawQuery)
 	if err != nil {
@@ -481,7 +463,7 @@ func (a *API) tasks(w http.ResponseWriter, r *http.Request, id enroll.Identity, 
 		if len(got) > 0 {
 			out := TasksResponse{Tasks: make([]Task, 0, len(got)), PollAfterSeconds: 0}
 			for _, t := range got {
-				out.Tasks = append(out.Tasks, Task{TaskID: t.ID, Type: "VERIFY_ENDPOINT",
+				out.Tasks = append(out.Tasks, Task{TaskID: t.ID, Type: model.TaskVerifyEndpoint,
 					Endpoint: &TaskEndpoint{Hostname: t.Hostname, Port: t.Port, SNI: t.SNI},
 					Deadline: t.LeasedUntil})
 			}
@@ -534,28 +516,6 @@ func (a *API) release(collector string) {
 	if a.perColl[collector]--; a.perColl[collector] <= 0 {
 		delete(a.perColl, collector)
 	}
-}
-
-// Heartbeat is A7. Schema-closed like everything else a collector sends.
-type Heartbeat struct {
-	CollectorID    string   `json:"collector_id"`
-	Version        string   `json:"version"`
-	ScopeDigest    string   `json:"scope_digest"`
-	UptimeSeconds  int64    `json:"uptime_seconds"`
-	SpoolBytes     int64    `json:"spool_bytes"`
-	SpoolPctFull   float64  `json:"spool_pct_full"`
-	TasksCompleted int64    `json:"tasks_completed"`
-	TasksFailed    int64    `json:"tasks_failed"`
-	LastError      string   `json:"last_error"`
-	ReachableCIDRs []string `json:"reachable_cidrs"`
-}
-
-// HeartbeatResponse tells the collector the server's time (for skew) and, for
-// an old protocol, when it stops being served.
-type HeartbeatResponse struct {
-	ServerTime               time.Time    `json:"server_time"`
-	HeartbeatIntervalSeconds int          `json:"heartbeat_interval_seconds"`
-	Deprecation              *Deprecation `json:"deprecation,omitempty"`
 }
 
 var (
