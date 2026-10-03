@@ -25,18 +25,34 @@ def grep(pat, glob="*.go"):
     return int(sh(f"grep -rl --include='{glob}' -E '{pat}' . 2>/dev/null | wc -l") or 0)
 
 # ---- parse the plan -------------------------------------------------------
+# Only the build-plan tables: §34 up to the one-way-door summary, whose rows
+# re-use item numbers and must not be counted twice.
 items, phase = [], "?"
 sec = PLAN.read_text()
-sec = sec[sec.index("## 34."):sec.index("## 35.")]
+sec = sec[sec.index("## 34."):sec.index("### The one-way doors")]
+clean = lambda c: re.sub(r"\*\*|`", "", c).strip()
 for line in sec.splitlines():
     m = re.match(r"^### (Phase [^\n]*)", line)
     if m:
         phase = re.sub(r"\*|`", "", m.group(1)).strip(); continue
-    r = re.match(r"^\|\s*(\d{3})\s*\|\s*\*{0,2}`?([^`|*]+)`?\*{0,2}\s*\|\s*(.+?)\s*\|", line)
-    if r:
-        items.append({"item": int(r.group(1)), "id": r.group(2).strip(),
-                      "title": re.sub(r"\*\*|`", "", r.group(3)).strip()[:120],
-                      "phase": phase})
+    r = re.match(r"^\|\s*(\d{3})\s*\|(.*)\|\s*$", line)
+    if not r:
+        continue
+    cells = [clean(c) for c in r.group(2).split("|")]
+    n = int(r.group(1))
+    if phase.startswith("Phase E15"):          # "| # | What | Gate |": no ID column
+        ident, title = f"ITEM-{n}", cells[0]
+    else:
+        ident, title = cells[0], cells[1]
+    items.append({"item": n, "id": ident, "title": title[:120], "phase": phase})
+
+# The ledger must account for every plan item exactly once. The first version
+# of this parser silently dropped three rows and double-counted three others,
+# and the total still came out at 176 by coincidence.
+nums = [it["item"] for it in items]
+assert sorted(nums) == list(range(1, 177)), (
+    f"plan parse is wrong: dups={sorted({n for n in nums if nums.count(n) > 1})} "
+    f"missing={sorted(set(range(1, 177)) - set(nums))}")
 
 # ---- evidence probes ------------------------------------------------------
 # Each entry: item range -> (status, implementation, tests, evidence)
@@ -107,72 +123,104 @@ def probe():
     for i in range(91, 177):
         ev[i] = ("NOT_STARTED", "", "", "")
 
-    # E8 tenancy + RLS (091-095, 097), verified against real PostgreSQL.
+    # From 091 on, every claim names the plan ID it is evidence FOR, and the
+    # claim is refused if that is not the plan's ID for that row. An earlier
+    # version keyed these blocks by work epic and shifted 120-141 onto the
+    # wrong rows, marking UI and partitioning VERIFIED with no UI in the repo.
+    def claim(i, pid, status, impl, tests, evidence):
+        assert plan_id[i].startswith(pid), f"item {i} is {plan_id[i]!r}, claim says {pid!r}"
+        ev[i] = (status, impl, tests, evidence)
+
+    # E8 tenancy + RLS, verified against real PostgreSQL.
     e8 = "17 tests inc. 14-table sweep; mutations: FORCE caught, session-SET caught"
-    for i, what in [(91, "constrained roles; Open refuses BYPASSRLS/superuser"),
-                    (92, "migration 001, RLS scaffolding, tenant_rls()"),
-                    (93, "internal/tenancy; no handle without a tenant"),
-                    (94, "set_config(..., TRUE) transaction-local"),
-                    (95, "migrations 002/003, 14 tenant-owned tables"),
-                    (97, "cross-tenant suite + pg_class/pg_policy sweep")]:
-        ev[i] = ("VERIFIED", what, "internal/store tests green", e8)
-    ev[96] = ("NOT_STARTED", "", "", "sqlc not wired; queries are hand-written pgx")
+    claim(91, "TENANT-001", "VERIFIED", "constrained roles; Open refuses BYPASSRLS/superuser", "internal/store", e8)
+    claim(92, "SCHEMA-001", "VERIFIED", "migration 001, RLS scaffolding, tenant_rls()", "internal/store", e8)
+    claim(93, "TENANT-002", "VERIFIED", "internal/tenancy; no handle without a tenant", "internal/store", e8)
+    claim(94, "TENANT-003", "VERIFIED", "set_config(..., TRUE) transaction-local", "internal/store", e8)
+    claim(95, "SCHEMA-002", "VERIFIED", "migrations 002-009, tenant-owned tables", "internal/store", e8)
+    claim(97, "TENANT-004", "VERIFIED", "cross-tenant suite + pg_class/pg_policy sweep; exactly one "
+          "pre-tenancy table, reachable only through SECURITY DEFINER functions", "internal/store", e8)
+    claim(96, "SCHEMA-013", "VERIFIED" if exists("sqlc.yaml") else "NOT_STARTED",
+          "sqlc.yaml; internal/store/queries -> internal/store/db, used by store/sched/history",
+          "make sqlc-check (vet + diff) in make check; 3 sqlc tests",
+          "generated query on bare pool sees 0 rows (RLS); every generated query used; "
+          "mutations 2/3 caught, 3rd (NULLIF cast) a measured equivalence")
 
-    # E9 auth. OIDC itself is NOT built.
+    # E9 auth.
     a9 = "6 of 6 mutations caught (disabled user, replay, idle, rotation, role, fail-open)"
-    ev[99] = ("VERIFIED", "internal/auth sessions", "13 tests", a9)
-    ev[101] = ("VERIFIED", "RBAC middleware, scope-then-authorize", "4 tests", a9)
-    ev[102] = ("VERIFIED", "authorization matrix, asserted total", "TestAuthorizationMatrix...", a9)
-    oidc = ("18 OIDC tests vs a real local IdP; mutations 5/6 caught, "
-            "6th exposed a bad test which was then fixed")
-    ev[98] = ("VERIFIED", "internal/auth/oidc.go — discovery, PKCE S256, nonce",
-              "forged signature, wrong issuer, wrong audience, nonce mismatch, "
-              "expired token, unregistered redirect, state replay", oidc)
-    ev[100] = ("VERIFIED", "domain-to-tenant from the verified claim; JIT viewer",
-               "cross-tenant token minting refused; non-enumerable unknown domain",
-               oidc)
+    oidc = ("OIDC tests vs a real local IdP; shared-issuer cross-tenant login found and "
+            "fixed (c871b3e); mutations 7/8 caught, 8th a measured equivalence")
+    claim(98, "AUTH-001", "VERIFIED", "internal/auth/oidc.go — discovery, PKCE S256, nonce",
+          "forged signature, wrong issuer/audience, nonce mismatch, expiry, state replay", oidc)
+    claim(99, "AUTH-002", "VERIFIED", "internal/auth sessions", "13 tests", a9)
+    claim(100, "AUTH-003", "VERIFIED", "domain-to-tenant from the verified claim; JIT viewer; "
+          "flow bound to (issuer, client, domain)", "cross-tenant login refused", oidc)
+    claim(101, "AUTH-004", "VERIFIED", "RBAC middleware, scope-then-authorize", "4 tests", a9)
+    claim(102, "AUTH-005", "VERIFIED", "authorization matrix, asserted total", "TestAuthorizationMatrix...", a9)
 
-    # E11 scheduler (persistent queue).
-    e11 = ("16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent "
-           "and documented; chasing one exposed a real error-conflation defect")
-    for i in range(110, 122):
-        ev[i] = ("VERIFIED", "internal/sched — persistent queue", "internal/sched tests", e11)
+    # E9 enrolment + ingestion.
+    e10 = "29 tests vs real PostgreSQL and a real TLS 1.3 connection; mutations 7/7 caught"
+    for i, pid, what in [(103, "ENROL-001", "CA, clientAuth-only issuance, narrow Sign/Bundle"),
+                         (104, "ENROL-002", "token: hashed, single-use, 24h, audited; 409 vs 401"),
+                         (105, "ENROL-003", "CSR validation: proof of possession, key strength"),
+                         (106, "ENROL-004", "rotation at 50% life; immediate revocation"),
+                         (107, "PROTO-002", "mTLS, TLS 1.3 min, CA pinning, no session tickets"),
+                         (108, "INGEST-001", "schema-closed decoder"),
+                         (109, "INGEST-002", "tenant cross-check vs client cert; 403 + audit"),
+                         (110, "INGEST-003", "INV-5 server-side private-key rejection"),
+                         (111, "INGEST-004", "idempotency by batch_id"),
+                         (112, "INGEST-005", "upsert pipeline"),
+                         (114, "INGEST-006", "caps: 1000 obs / 5MB / 20MB; gzip bomb bounded")]:
+        claim(i, pid, "VERIFIED", what, "internal/ingest + internal/enroll", e10)
+    claim(113, "EP-001", "IMPLEMENTED", "endpoints upserted on ingest", "covered indirectly",
+          "proposal/dedup/monitored flags not built")
 
-    # E12 history / temporal persistence.
-    e12 = "9 tests vs real PostgreSQL; idempotency + restart + out-of-order + isolation"
-    for i in range(122, 128):
-        ev[i] = ("VERIFIED", "internal/history — state + transitions, one transaction",
-                 "internal/history tests", e12)
+    # E10 scheduling and drift. Only what the row asks for counts.
+    claim(122, "SCHED-003", "IMPLEMENTED", "internal/sched — persistent queue, SKIP LOCKED, leases",
+          "TestConcurrentWorkersNeverClaimTheSameJob, TestConcurrentEnqueueOfOneKeyProducesOneRow",
+          "two workers never double-claim (verified); per-collector enqueue not built")
+    claim(127, "DRIFT-001", "VERIFIED", "drift_events (002), written in the fold's transaction",
+          "internal/history tests", "9 tests vs real PostgreSQL; idempotency, restart, isolation")
+    claim(128, "DRIFT-004", "VERIFIED", "alerts partial unique index on (tenant, dedupe_key) WHERE open",
+          "TestConcurrentConfirmingFoldsProduceOneAlert, TestRepeatedDriftDoesNotDuplicate",
+          "a second open alert for a group is refused by the database")
+    for i, pid, what in [(121, "SCHED-001", "partial: next_verify_at exists; no tier model, no jitter"),
+                         (123, "SCHED-004", "no promotion/demotion"),
+                         (124, "SCHED-006", "partial: queue depth (StatsFor) only; no demotion, no UI"),
+                         (125, "SCHED-007", "no collector-silence sweep"),
+                         (126, "SCHED-008", "job retry backoff exists; endpoint transport backoff does not"),
+                         (129, "DRIFT-005", "partial: recovery only; no ack, snooze, ownership-gap"),
+                         (130, "DRIFT-008", "no report_only flag"),
+                         (131, "DRIFT-009", "no total_30d"),
+                         (132, "SCHEMA-011", "no partitioning, no downsample"),
+                         (133, "EXP-001", "partial: expected_states table only; no write path"),
+                         (135, "EXP-004", "API not built"),
+                         (136, "EXP-006", "not built"),
+                         (137, "UI-001", "no UI in the repository"),
+                         (138, "UI-004", "no UI in the repository"),
+                         (139, "UI-005", "no UI in the repository"),
+                         (140, "EXP-005", "not built"),
+                         (142, "ALERT-003", "partial: Notifier interface only; no Slack, no SES"),
+                         (143, "ALERT-005", "partial: re-notification sweep + recovery; no 0/4/24h, ack, snooze"),
+                         (144, "ALERT-007", "partial: retry + give-up; no channel health, no rate limit"),
+                         (145, "ALERT-009", "no cross-endpoint aggregation")]:
+        claim(i, pid, "NOT_STARTED", "", "", what)
+    claim(134, "EXP-008", "IMPLEMENTED", "pkg/verify/classify.go — Alertable set in one place",
+          "TestUnconfirmedExpectationNeverAlerts + regression", "the 16-case matrix is not asserted as such")
+    claim(141, "ALERT-001", "IMPLEMENTED", "internal/alert — alerts + alert_deliveries outbox, upsert",
+          "internal/alert 14 tests", "tables and upsert verified; endpoint aggregation not built")
+    claim(146, "S7", "IMPLEMENTED", "unconfirmed -> not alertable -> no event -> no alert",
+          "TestNonAlertableResultNeverCreatesAnAlert (real PostgreSQL)",
+          "zero notifications verified; the 'one UI row' half needs the UI")
+    claim(120, "PROTO-009", "NOT_STARTED", "", "", "conformance suite not built")
+    for i, pid in [(115, "PROTO-003"), (116, "PROTO-004"), (117, "PROTO-005"),
+                   (118, "PROTO-007"), (119, "PROTO-008")]:
+        claim(i, pid, "NOT_STARTED", "", "", "collector-side protocol")
 
-    # E10 enrolment + ingestion.
-    e10 = ("29 tests vs real PostgreSQL and a real TLS 1.3 connection; "
-           "mutations 7/7 caught")
-    for i, what in [(103, "CA, clientAuth-only issuance, narrow Sign/Bundle"),
-                    (104, "token: hashed, single-use, 24h, audited; 409 vs 401"),
-                    (105, "CSR validation: proof of possession, key strength"),
-                    (106, "rotation at 50% life; immediate revocation"),
-                    (107, "mTLS, TLS 1.3 min, CA pinning, no session tickets"),
-                    (108, "schema-closed decoder"),
-                    (109, "tenant cross-check vs client cert; 403 + audit"),
-                    (110, "INV-5 server-side private-key rejection"),
-                    (111, "idempotency by batch_id"),
-                    (112, "upsert pipeline"),
-                    (114, "caps: 1000 obs / 5MB / 20MB; gzip bomb bounded")]:
-        ev[i] = ("VERIFIED", what, "internal/ingest + internal/enroll", e10)
-    ev[113] = ("IMPLEMENTED", "endpoints upserted on ingest",
-               "covered indirectly", "proposal/dedup/monitored flags not built")
-    for i in (115, 116, 117, 118, 119):
-        ev[i] = ("NOT_STARTED", "", "", "collector-side protocol: long-poll, spool, JWS")
+    claim(89, "LOCAL-003", "IN_PROGRESS", "test/lab/soak/run.sh (caffeinate + gap detection)", "running",
+          "attempt 1 INVALID (host slept); attempt 2 started 2026-10-03T14:15:48Z; "
+          "must not be VERIFIED before a full 24h with zero invalidating gaps")
 
-    # E13 alerting.
-    e13 = ("14 tests vs real PostgreSQL; mutations 3/4 caught, 4th a measured "
-           "equivalence (endpoint_state row lock serializes folds)")
-    for i in range(128, 142):
-        ev[i] = ("VERIFIED", "internal/alert — outbox, dedupe, cooldown, retry",
-                 "internal/alert tests", e13)
-
-    ev[89] = ("IN_PROGRESS", "test/lab/soak/run.sh", "running",
-              "24h unattended run STARTED 2026-09-30T17:17Z; must not be VERIFIED early")
     # Items that are not engineering at all.
     for i, why in [(171, "SOC 2 Type II observation window — months, needs an auditor"),
                    (172, "design-partner pilot — needs a customer"),
@@ -181,6 +229,7 @@ def probe():
         ev[i] = ("BLOCKED_EXTERNAL", "", "", why)
     return ev
 
+plan_id = {it["item"]: it["id"] for it in items}
 ev = probe()
 commit = sh("git rev-parse --short HEAD")
 for it in items:

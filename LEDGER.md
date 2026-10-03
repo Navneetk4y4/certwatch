@@ -1,17 +1,17 @@
 # Completion ledger
 
-Generated from `project_1_full_development_plan.md` and the repository at `e7ed7c6`.
+Generated from `project_1_full_development_plan.md` and the repository at `28466a7`.
 Every status is an evidence probe against the working tree, not a claim from a document.
 
 ## Totals
 
 | Status | Items |
 |---|---|
-| VERIFIED | 128 |
-| IMPLEMENTED | 4 |
+| VERIFIED | 106 |
+| IMPLEMENTED | 8 |
 | IN_PROGRESS | 2 |
-| BLOCKED_EXTERNAL | 3 |
-| NOT_STARTED | 39 |
+| BLOCKED_EXTERNAL | 5 |
+| NOT_STARTED | 55 |
 | **Total** | **176** |
 
 `COMPLETE` is deliberately absent: it requires implementation, tests and
@@ -160,12 +160,12 @@ verification evidence together, and is not claimed for any item here.
 | 086 | `PROTO-001` | VERIFIED | renaming/retyping/removing a field fails with a diff |
 | 087 | `LOCAL-001` | NOT_STARTED | — |
 | 088 | `LOCAL-002` | NOT_STARTED | — |
-| 089 | `LOCAL-003` | IN_PROGRESS | 24h unattended run STARTED 2026-09-30T17:17Z; must not be VERIFIED early |
+| 089 | `LOCAL-003` | IN_PROGRESS | attempt 1 INVALID (host slept); attempt 2 started 2026-10-03T14:15:48Z; must not be VERIFIED before a full 24h with zero invalidating gaps |
 | 090 | `CANARY-B` | NOT_STARTED | — |
 
 ## Phase E8 — Control plane foundation
 
-*12 items — 1 not_started, 11 verified*
+*12 items — 12 verified*
 
 | # | ID | Status | Evidence |
 |---|---|---|---|
@@ -174,17 +174,17 @@ verification evidence together, and is not claimed for any item here.
 | 093 | `TENANT-002` | VERIFIED | 17 tests inc. 14-table sweep; mutations: FORCE caught, session-SET caught |
 | 094 | `TENANT-003` | VERIFIED | 17 tests inc. 14-table sweep; mutations: FORCE caught, session-SET caught |
 | 095 | `SCHEMA-002..010` | VERIFIED | 17 tests inc. 14-table sweep; mutations: FORCE caught, session-SET caught |
-| 096 | `SCHEMA-013` | NOT_STARTED | sqlc not wired; queries are hand-written pgx |
+| 096 | `SCHEMA-013` | VERIFIED | generated query on bare pool sees 0 rows (RLS); every generated query used; mutations 2/3 caught, 3rd (NULLIF cast) a measured equivalence |
 | 097 | `TENANT-004` | VERIFIED | 17 tests inc. 14-table sweep; mutations: FORCE caught, session-SET caught |
-| 098 | `AUTH-001` | VERIFIED | 18 OIDC tests vs a real local IdP; mutations 5/6 caught, 6th exposed a bad test which was then fixed |
+| 098 | `AUTH-001` | VERIFIED | OIDC tests vs a real local IdP; shared-issuer cross-tenant login found and fixed (c871b3e); mutations 7/8 caught, 8th a measured equivalence |
 | 099 | `AUTH-002` | VERIFIED | 6 of 6 mutations caught (disabled user, replay, idle, rotation, role, fail-open) |
-| 100 | `AUTH-003` | VERIFIED | 18 OIDC tests vs a real local IdP; mutations 5/6 caught, 6th exposed a bad test which was then fixed |
+| 100 | `AUTH-003` | VERIFIED | OIDC tests vs a real local IdP; shared-issuer cross-tenant login found and fixed (c871b3e); mutations 7/8 caught, 8th a measured equivalence |
 | 101 | `AUTH-004` | VERIFIED | 6 of 6 mutations caught (disabled user, replay, idle, rotation, role, fail-open) |
 | 102 | `AUTH-005` | VERIFIED | 6 of 6 mutations caught (disabled user, replay, idle, rotation, role, fail-open) |
 
 ## Phase E9 — Enrolment, protocol and ingest
 
-*18 items — 1 implemented, 5 not_started, 12 verified*
+*18 items — 1 implemented, 6 not_started, 11 verified*
 
 | # | ID | Status | Evidence |
 |---|---|---|---|
@@ -200,56 +200,56 @@ verification evidence together, and is not claimed for any item here.
 | 112 | `INGEST-005` | VERIFIED | 29 tests vs real PostgreSQL and a real TLS 1.3 connection; mutations 7/7 caught |
 | 113 | `EP-001..006` | IMPLEMENTED | proposal/dedup/monitored flags not built |
 | 114 | `INGEST-006` | VERIFIED | 29 tests vs real PostgreSQL and a real TLS 1.3 connection; mutations 7/7 caught |
-| 115 | `PROTO-003` | NOT_STARTED | collector-side protocol: long-poll, spool, JWS |
-| 116 | `PROTO-004` | NOT_STARTED | collector-side protocol: long-poll, spool, JWS |
-| 117 | `PROTO-005..006` | NOT_STARTED | collector-side protocol: long-poll, spool, JWS |
-| 118 | `PROTO-007` | NOT_STARTED | collector-side protocol: long-poll, spool, JWS |
-| 119 | `PROTO-008` | NOT_STARTED | collector-side protocol: long-poll, spool, JWS |
-| 120 | `PROTO-009` | VERIFIED | 16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect |
+| 115 | `PROTO-003` | NOT_STARTED | collector-side protocol |
+| 116 | `PROTO-004` | NOT_STARTED | collector-side protocol |
+| 117 | `PROTO-005..006` | NOT_STARTED | collector-side protocol |
+| 118 | `PROTO-007` | NOT_STARTED | collector-side protocol |
+| 119 | `PROTO-008` | NOT_STARTED | collector-side protocol |
+| 120 | `PROTO-009` | NOT_STARTED | conformance suite not built |
 
 ## Phase E10 — Scheduling and drift
 
-*12 items — 12 verified*
+*12 items — 1 implemented, 9 not_started, 2 verified*
 
 | # | ID | Status | Evidence |
 |---|---|---|---|
-| 121 | `SCHED-001..002` | VERIFIED | 16 tests vs real PostgreSQL; mutations 3/5 caught, 2 equivalent and documented; chasing one exposed a real error-conflation defect |
-| 122 | `SCHED-003` | VERIFIED | 9 tests vs real PostgreSQL; idempotency + restart + out-of-order + isolation |
-| 123 | `SCHED-004..005` | VERIFIED | 9 tests vs real PostgreSQL; idempotency + restart + out-of-order + isolation |
-| 124 | `SCHED-006` | VERIFIED | 9 tests vs real PostgreSQL; idempotency + restart + out-of-order + isolation |
-| 125 | `SCHED-007` | VERIFIED | 9 tests vs real PostgreSQL; idempotency + restart + out-of-order + isolation |
-| 126 | `SCHED-008` | VERIFIED | 9 tests vs real PostgreSQL; idempotency + restart + out-of-order + isolation |
-| 127 | `DRIFT-001` | VERIFIED | 9 tests vs real PostgreSQL; idempotency + restart + out-of-order + isolation |
-| 128 | `DRIFT-004` | VERIFIED | 14 tests vs real PostgreSQL; mutations 3/4 caught, 4th a measured equivalence (endpoint_state row lock serializes folds) |
-| 129 | `DRIFT-005..007` | VERIFIED | 14 tests vs real PostgreSQL; mutations 3/4 caught, 4th a measured equivalence (endpoint_state row lock serializes folds) |
-| 130 | `DRIFT-008` | VERIFIED | 14 tests vs real PostgreSQL; mutations 3/4 caught, 4th a measured equivalence (endpoint_state row lock serializes folds) |
-| 131 | `DRIFT-009` | VERIFIED | 14 tests vs real PostgreSQL; mutations 3/4 caught, 4th a measured equivalence (endpoint_state row lock serializes folds) |
-| 132 | `SCHEMA-011..012` | VERIFIED | 14 tests vs real PostgreSQL; mutations 3/4 caught, 4th a measured equivalence (endpoint_state row lock serializes folds) |
+| 121 | `SCHED-001..002` | NOT_STARTED | partial: next_verify_at exists; no tier model, no jitter |
+| 122 | `SCHED-003` | IMPLEMENTED | two workers never double-claim (verified); per-collector enqueue not built |
+| 123 | `SCHED-004..005` | NOT_STARTED | no promotion/demotion |
+| 124 | `SCHED-006` | NOT_STARTED | partial: queue depth (StatsFor) only; no demotion, no UI |
+| 125 | `SCHED-007` | NOT_STARTED | no collector-silence sweep |
+| 126 | `SCHED-008` | NOT_STARTED | job retry backoff exists; endpoint transport backoff does not |
+| 127 | `DRIFT-001` | VERIFIED | 9 tests vs real PostgreSQL; idempotency, restart, isolation |
+| 128 | `DRIFT-004` | VERIFIED | a second open alert for a group is refused by the database |
+| 129 | `DRIFT-005..007` | NOT_STARTED | partial: recovery only; no ack, snooze, ownership-gap |
+| 130 | `DRIFT-008` | NOT_STARTED | no report_only flag |
+| 131 | `DRIFT-009` | NOT_STARTED | no total_30d |
+| 132 | `SCHEMA-011..012` | NOT_STARTED | no partitioning, no downsample |
 
 ## Phase E11 — Alerting and the confirmation UI (GAP-4)
 
-*14 items — 5 not_started, 9 verified*
+*14 items — 3 implemented, 11 not_started*
 
 | # | ID | Status | Evidence |
 |---|---|---|---|
-| 133 | `EXP-001..002` | VERIFIED | 14 tests vs real PostgreSQL; mutations 3/4 caught, 4th a measured equivalence (endpoint_state row lock serializes folds) |
-| 134 | `EXP-008` | VERIFIED | 14 tests vs real PostgreSQL; mutations 3/4 caught, 4th a measured equivalence (endpoint_state row lock serializes folds) |
-| 135 | `EXP-004` | VERIFIED | 14 tests vs real PostgreSQL; mutations 3/4 caught, 4th a measured equivalence (endpoint_state row lock serializes folds) |
-| 136 | `EXP-006..007` | VERIFIED | 14 tests vs real PostgreSQL; mutations 3/4 caught, 4th a measured equivalence (endpoint_state row lock serializes folds) |
-| 137 | `UI-001..002` | VERIFIED | 14 tests vs real PostgreSQL; mutations 3/4 caught, 4th a measured equivalence (endpoint_state row lock serializes folds) |
-| 138 | `UI-004` | VERIFIED | 14 tests vs real PostgreSQL; mutations 3/4 caught, 4th a measured equivalence (endpoint_state row lock serializes folds) |
-| 139 | `UI-005` | VERIFIED | 14 tests vs real PostgreSQL; mutations 3/4 caught, 4th a measured equivalence (endpoint_state row lock serializes folds) |
-| 140 | `EXP-005` | VERIFIED | 14 tests vs real PostgreSQL; mutations 3/4 caught, 4th a measured equivalence (endpoint_state row lock serializes folds) |
-| 141 | `ALERT-001..002` | VERIFIED | 14 tests vs real PostgreSQL; mutations 3/4 caught, 4th a measured equivalence (endpoint_state row lock serializes folds) |
-| 142 | `ALERT-003..004` | NOT_STARTED | — |
-| 143 | `ALERT-005..006` | NOT_STARTED | — |
-| 144 | `ALERT-007..008` | NOT_STARTED | — |
-| 145 | `ALERT-009` | NOT_STARTED | — |
-| 146 | `S7` | NOT_STARTED | — |
+| 133 | `EXP-001..002` | NOT_STARTED | partial: expected_states table only; no write path |
+| 134 | `EXP-008` | IMPLEMENTED | the 16-case matrix is not asserted as such |
+| 135 | `EXP-004` | NOT_STARTED | API not built |
+| 136 | `EXP-006..007` | NOT_STARTED | not built |
+| 137 | `UI-001..002` | NOT_STARTED | no UI in the repository |
+| 138 | `UI-004` | NOT_STARTED | no UI in the repository |
+| 139 | `UI-005` | NOT_STARTED | no UI in the repository |
+| 140 | `EXP-005` | NOT_STARTED | not built |
+| 141 | `ALERT-001..002` | IMPLEMENTED | tables and upsert verified; endpoint aggregation not built |
+| 142 | `ALERT-003..004` | NOT_STARTED | partial: Notifier interface only; no Slack, no SES |
+| 143 | `ALERT-005..006` | NOT_STARTED | partial: re-notification sweep + recovery; no 0/4/24h, ack, snooze |
+| 144 | `ALERT-007..008` | NOT_STARTED | partial: retry + give-up; no channel health, no rate limit |
+| 145 | `ALERT-009` | NOT_STARTED | no cross-endpoint aggregation |
+| 146 | `S7` | IMPLEMENTED | zero notifications verified; the 'one UI row' half needs the UI |
 
 ## Phase E12 — Remaining UI, audit and export
 
-*6 items — 6 not_started*
+*7 items — 7 not_started*
 
 | # | ID | Status | Evidence |
 |---|---|---|---|
@@ -258,6 +258,7 @@ verification evidence together, and is not claimed for any item here.
 | 149 | `UI-007..008` | NOT_STARTED | — |
 | 150 | `AUDIT-001..003` | NOT_STARTED | — |
 | 151 | `AUDIT-004` | NOT_STARTED | — |
+| 152 | `UI-009..010, EXPORT-001..002` | NOT_STARTED | — |
 | 153 | `UI-011` | NOT_STARTED | — |
 
 ## Phase E13 — Kubernetes
@@ -294,13 +295,12 @@ verification evidence together, and is not claimed for any item here.
 
 ## Phase E15–E17
 
-*6 items — 1 blocked_external, 2 not_started, 3 verified*
+*5 items — 3 blocked_external, 2 not_started*
 
 | # | ID | Status | Evidence |
 |---|---|---|---|
-| 174 | `Onboarding documentation; support SLA; manual invoicing` | NOT_STARTED | — |
-| 175 | `First paying customer — signed annual contract ≥$9,000` | BLOCKED_EXTERNAL | first paying customer, signed contract >= $9,000 |
-| 176 | `V1: inference, policy rules, attestation, Azure/GCP, webhooks, billing, self-serve, load test` | NOT_STARTED | — |
-| 023 | `fingerprint = SHA-256(full DER)` | VERIFIED | make check: pass; 19 packages ok |
-| 026 | `Wildcard SAN semantics` | VERIFIED | make check: pass; 19 packages ok |
-| 108 | `Schema-closed ingest decoder` | VERIFIED | 29 tests vs real PostgreSQL and a real TLS 1.3 connection; mutations 7/7 caught |
+| 172 | `ITEM-172` | BLOCKED_EXTERNAL | design-partner pilot — needs a customer |
+| 173 | `ITEM-173` | BLOCKED_EXTERNAL | 7-day false-positive soak — needs a pilot |
+| 174 | `ITEM-174` | NOT_STARTED | — |
+| 175 | `ITEM-175` | BLOCKED_EXTERNAL | first paying customer, signed contract >= $9,000 |
+| 176 | `ITEM-176` | NOT_STARTED | — |
