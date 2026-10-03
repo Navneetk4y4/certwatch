@@ -8,6 +8,16 @@
 #
 #   nohup test/lab/soak/run.sh > /dev/null 2>&1 &
 set -uo pipefail
+
+# The first 24-hour attempt (2026-09-30) recorded 668 cycles where ~1,380 were
+# expected, with an 11-hour hole: the host went to sleep. Wall-clock "elapsed"
+# kept advancing, so the run LOOKED like it covered a day. Two fixes:
+#   1. caffeinate holds an idle-sleep assertion on macOS for the life of the run
+#   2. any gap between cycles larger than GAP_LIMIT invalidates the run, loudly
+if [ -z "${SOAK_CAFFEINATED:-}" ] && command -v caffeinate >/dev/null 2>&1; then
+  export SOAK_CAFFEINATED=1
+  exec caffeinate -i -s "$0" "$@"
+fi
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUT="${SOAK_OUT:-$HERE/evidence}"
 mkdir -p "$OUT"
@@ -18,6 +28,9 @@ LOG="$OUT/soak.jsonl"
 META="$OUT/meta.json"
 
 start=$(date -u +%s)
+GAP_LIMIT="${SOAK_GAP_LIMIT:-$(( INTERVAL * 3 ))}"
+last_cycle_at=$start
+gaps=0
 cat > "$META" <<EOF
 {"started_at":"$(date -u +%Y-%m-%dT%H:%M:%SZ)",
  "commit":"$(git -C "$HERE/../../.." rev-parse HEAD 2>/dev/null)",
@@ -31,6 +44,16 @@ while :; do
   elapsed=$(( now - start ))
   [ "$elapsed" -ge "$DURATION" ] && break
   cycle=$(( cycle + 1 ))
+
+  # A gap far larger than the interval means the host slept or the process
+  # was stopped. Record it as an invalidating event; never let it pass silently.
+  gap=$(( now - last_cycle_at ))
+  if [ "$cycle" -gt 1 ] && [ "$gap" -gt "$GAP_LIMIT" ]; then
+    gaps=$(( gaps + 1 ))
+    printf '{"INVALIDATING_GAP":true,"cycle":%d,"gap_seconds":%d,"limit":%d,"at":"%s"}\n' \
+      "$cycle" "$gap" "$GAP_LIMIT" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$LOG"
+  fi
+  last_cycle_at=$now
 
   # One verification through the full production path, inside the lab network.
   res=$(docker run --rm --network "$NET" --dns 10.77.0.53 \
@@ -66,5 +89,6 @@ while :; do
   sleep "$INTERVAL"
 done
 
-printf '{"finished_at":"%s","cycles":%d,"elapsed":%d}\n' \
-  "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$cycle" "$(( $(date -u +%s) - start ))" >> "$LOG"
+printf '{"finished_at":"%s","cycles":%d,"elapsed":%d,"invalidating_gaps":%d,"expected_cycles_min":%d}\n' \
+  "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$cycle" "$(( $(date -u +%s) - start ))" "$gaps" \
+  "$(( DURATION / (INTERVAL + 30) ))" >> "$LOG"
